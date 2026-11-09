@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OdooControlPanel } from "@/components/layout/OdooControlPanel";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface VaultEntry {
   id: string;
@@ -97,6 +98,10 @@ const mockSessions: SessionItem[] = [
 ];
 
 export default function VaultPage() {
+  const { hasPermission } = useAuthStore();
+  const canReadVault = hasPermission("vault:read");
+  const canWriteVault = hasPermission("vault:write");
+
   const [entries, setEntries] = useState<VaultEntry[]>(mockVault);
   const [sessions, setSessions] = useState<SessionItem[]>(mockSessions);
   const [activeTab, setActiveTab] = useState<"vault" | "sessions" | "policy">("vault");
@@ -176,7 +181,7 @@ export default function VaultPage() {
         appName="Settings"
         viewName="Encrypted Vault & Sessions"
         newButtonLabel="New Secret"
-        onNewClick={() => setShowNewSecretModal(true)}
+        onNewClick={canWriteVault ? () => setShowNewSecretModal(true) : undefined}
         availableViews={["list"]}
         activeView="list"
         searchValue={searchQuery}
@@ -228,6 +233,17 @@ export default function VaultPage() {
 
       {/* Tab 1: Brand Credentials Vault */}
       {activeTab === "vault" && (
+        !canReadVault ? (
+          <div className="bg-white border border-amber-200 rounded-lg p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <Lock size={22} />
+            </div>
+            <h4 className="font-bold text-sm text-zinc-900">Restricted Brand Vault Clearance</h4>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              Your account does not have <span className="font-mono text-purple-700 font-semibold">vault:read</span> clearance. Contact your Agency Super Admin to grant Brand Vault access.
+            </p>
+          </div>
+        ) : (
         <div className="space-y-4">
           <div className="bg-[#FAF5FF] border border-[#E9D5FF] rounded p-4 flex items-start gap-3 text-xs text-[#6B21A8]">
             <ShieldCheck size={20} className="text-[#714B67] shrink-0 mt-0.5" />
@@ -310,6 +326,7 @@ export default function VaultPage() {
             )}
           </div>
         </div>
+        )
       )}
 
       {/* Tab 2: Active Device Sessions */}

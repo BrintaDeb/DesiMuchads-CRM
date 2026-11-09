@@ -35,8 +35,37 @@ export interface User {
   can_manage_automations?: boolean;
   can_edit_projects?: boolean;
   can_manage_billing?: boolean;
+  permissions?: string[];
   is_active: boolean;
   created_at: string;
+}
+
+export interface PermissionItem {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface PermissionModule {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  permissions: PermissionItem[];
+}
+
+export interface PermissionPreset {
+  id: string;
+  name: string;
+  badge: string;
+  description: string;
+  permissions: string[];
+}
+
+export interface PermissionMatrixResponse {
+  modules: PermissionModule[];
+  presets: PermissionPreset[];
+  all_permissions: string[];
 }
 
 export interface AttendanceLog {

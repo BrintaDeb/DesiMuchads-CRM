@@ -27,24 +27,29 @@ interface NavItem {
   icon: React.ElementType;
   badge?: string;
   roles?: string[];
+  permission?: string;
 }
 
 const navItems: NavItem[] = [
   { label: "Executive Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Sales Pipeline & CRM", href: "/crm", icon: Users, badge: "Won Auto" },
-  { label: "DAG Projects & Tasks", href: "/tasks", icon: KanbanSquare },
-  { label: "Content Approval", href: "/content-calendar", icon: CheckSquare, badge: "2-Tier" },
+  { label: "Sales Pipeline & CRM", href: "/crm", icon: Users, badge: "Won Auto", permission: "crm:read" },
+  { label: "DAG Projects & Tasks", href: "/tasks", icon: KanbanSquare, permission: "projects:read" },
+  { label: "Content Approval", href: "/content-calendar", icon: CheckSquare, badge: "2-Tier", permission: "content:read" },
   { label: "Unified Master Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Workforce & Attendance", href: "/attendance", icon: Clock },
-  { label: "Billing & GST Ledger", href: "/billing", icon: Receipt },
-  { label: "AES-256 Vault", href: "/settings/vault", icon: ShieldCheck },
+  { label: "Workforce & Attendance", href: "/attendance", icon: Clock, permission: "attendance:read" },
+  { label: "Billing & GST Ledger", href: "/billing", icon: Receipt, permission: "billing:read" },
+  { label: "AES-256 Vault", href: "/settings/vault", icon: ShieldCheck, permission: "vault:read" },
   { label: "Client Portal Preview", href: "/client-portal", icon: ExternalLink },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { user } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
+
+  const accessibleNavItems = navItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   return (
     <aside
@@ -80,7 +85,7 @@ export function Sidebar() {
 
         {/* Navigation List */}
         <nav className="p-2 space-y-1">
-          {navItems.map((item) => {
+          {accessibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             return (

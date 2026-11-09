@@ -31,6 +31,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { AutomationRule, DaemonStatus, AutomationAuditLog } from "@/types";
 import { OdooControlPanel } from "@/components/layout/OdooControlPanel";
+import { useAuthStore } from "@/stores/authStore";
 
 const initialDemoDaemons: DaemonStatus[] = [
   {
@@ -148,6 +149,7 @@ export default function AutomationStudioPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSweeping, setIsSweeping] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { hasPermission } = useAuthStore();
 
   // New Rule Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -291,7 +293,10 @@ export default function AutomationStudioPage() {
     }
   };
 
-  const canManageAutomations = currentUser?.role === "SUPER_ADMIN" || currentUser?.can_manage_automations;
+  const canManageAutomations =
+    hasPermission("automations:write") ||
+    currentUser?.role === "SUPER_ADMIN" ||
+    currentUser?.can_manage_automations;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F9FA] text-[#1E293B]">
@@ -299,7 +304,7 @@ export default function AutomationStudioPage() {
       <OdooControlPanel
         appName="Agency OS"
         viewName="Automation Studio & Engine"
-        onNewClick={() => setIsCreateModalOpen(true)}
+        onNewClick={canManageAutomations ? () => setIsCreateModalOpen(true) : undefined}
         newButtonLabel="New Rule"
         activeView="kanban"
         availableViews={["kanban"]}

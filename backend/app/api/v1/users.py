@@ -8,12 +8,41 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user, hash_password
+from app.core.permissions import (
+    ALL_MODULES,
+    PERMISSION_PRESETS,
+    ALL_PERMISSION_IDS,
+    get_default_permissions_for_role,
+)
 from app.models.models import User
 from app.models.enums import UserRole
-from app.schemas.schemas import ApiResponse, UserOut, UserCreate, UserUpdate
+from app.schemas.schemas import (
+    ApiResponse,
+    UserOut,
+    UserCreate,
+    UserUpdate,
+    UserPermissionsUpdate,
+    PermissionMatrixResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users & Team Management"])
+
+
+@router.get("/permissions/matrix", response_model=ApiResponse[PermissionMatrixResponse])
+async def get_permissions_matrix(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns the comprehensive canonical permissions matrix, modules, and 1-click role presets.
+    """
+    return ApiResponse(
+        data=PermissionMatrixResponse(
+            modules=ALL_MODULES,
+            presets=PERMISSION_PRESETS,
+            all_permissions=ALL_PERMISSION_IDS,
+        )
+    )
 
 
 @router.get("", response_model=ApiResponse[List[UserOut]])
@@ -48,6 +77,16 @@ async def list_users(
     result = await db.execute(query)
     users = list(result.scalars().all())
 
+    # Populate fallback permissions for roster display if user.permissions is empty
+    for u in users:
+        if not u.permissions:
+            u.permissions = get_default_permissions_for_role(
+                role=u.role,
+                can_manage_automations=u.can_manage_automations,
+                can_edit_projects=u.can_edit_projects,
+                can_manage_billing=u.can_manage_billing,
+            )
+
     return ApiResponse(
         data=[UserOut.model_validate(u) for u in users],
         meta={"total_count": len(users), "timestamp": datetime.utcnow()},
@@ -62,7 +101,7 @@ async def create_user(
 ):
     """
     Provision a new team member with immediate login capability.
-    Allows assigning role, department, hourly rate, and automation permissions.
+    Allows assigning role, department, hourly rate, and granular software module permissions.
     """
     # Permission check: Super Admin or Account Manager with user management rights
     if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER]:
@@ -83,6 +122,16 @@ async def create_user(
     # Hash password securely
     hashed_pwd = hash_password(user_in.password)
 
+    # Compute final permissions list
+    final_permissions = user_in.permissions
+    if not final_permissions:
+        final_permissions = get_default_permissions_for_role(
+            role=user_in.role,
+            can_manage_automations=user_in.can_manage_automations,
+            can_edit_projects=user_in.can_edit_projects,
+            can_manage_billing=user_in.can_manage_billing,
+        )
+
     new_user = User(
         email=user_in.email.lower().strip(),
         password_hash=hashed_pwd,
@@ -91,9 +140,10 @@ async def create_user(
         department=user_in.department.strip(),
         hourly_cost=user_in.hourly_cost,
         weekly_capacity_hours=user_in.weekly_capacity_hours,
-        can_manage_automations=user_in.can_manage_automations,
-        can_edit_projects=user_in.can_edit_projects,
-        can_manage_billing=user_in.can_manage_billing,
+        can_manage_automations=user_in.can_manage_automations or ("automations:write" in final_permissions),
+        can_edit_projects=user_in.can_edit_projects or ("projects:write" in final_permissions),
+        can_manage_billing=user_in.can_manage_billing or ("billing:write" in final_permissions),
+        permissions=final_permissions,
         is_active=user_in.is_active,
     )
 
@@ -101,7 +151,7 @@ async def create_user(
     await db.commit()
     await db.refresh(new_user)
 
-    logger.info(f"User created: {new_user.email} (Role: {new_user.role.value}, Automation: {new_user.can_manage_automations}) by {current_user.email}")
+    logger.info(f"User created: {new_user.email} (Role: {new_user.role.value}, Permissions count: {len(new_user.permissions or [])}) by {current_user.email}")
     return ApiResponse(data=UserOut.model_validate(new_user))
 
 
@@ -120,6 +170,14 @@ async def get_user_detail(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    if not user.permissions:
+        user.permissions = get_default_permissions_for_role(
+            role=user.role,
+            can_manage_automations=user.can_manage_automations,
+            can_edit_projects=user.can_edit_projects,
+            can_manage_billing=user.can_manage_billing,
+        )
+
     return ApiResponse(data=UserOut.model_validate(user))
 
 
@@ -131,7 +189,7 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update user profile, credentials, role, and automation permissions.
+    Update user profile, credentials, role, and granular module permissions.
     """
     # Permission check: Only SUPER_ADMIN can alter other users' permissions and roles
     if current_user.role != UserRole.SUPER_ADMIN and current_user.id != user_id:
@@ -156,16 +214,23 @@ async def update_user(
     if user_update.weekly_capacity_hours is not None:
         user.weekly_capacity_hours = user_update.weekly_capacity_hours
 
-    # Privilege updates (Super Admin only)
+    # Privilege & Permission updates (Super Admin only)
     if current_user.role == UserRole.SUPER_ADMIN:
         if user_update.role is not None:
             user.role = user_update.role
-        if user_update.can_manage_automations is not None:
-            user.can_manage_automations = user_update.can_manage_automations
-        if user_update.can_edit_projects is not None:
-            user.can_edit_projects = user_update.can_edit_projects
-        if user_update.can_manage_billing is not None:
-            user.can_manage_billing = user_update.can_manage_billing
+        if user_update.permissions is not None:
+            cleaned_perms = list(set(user_update.permissions))
+            user.permissions = cleaned_perms
+            user.can_manage_automations = "automations:write" in cleaned_perms or "automations:*" in cleaned_perms
+            user.can_manage_billing = "billing:write" in cleaned_perms or "billing:*" in cleaned_perms
+            user.can_edit_projects = "projects:write" in cleaned_perms or "projects:*" in cleaned_perms
+        else:
+            if user_update.can_manage_automations is not None:
+                user.can_manage_automations = user_update.can_manage_automations
+            if user_update.can_edit_projects is not None:
+                user.can_edit_projects = user_update.can_edit_projects
+            if user_update.can_manage_billing is not None:
+                user.can_manage_billing = user_update.can_manage_billing
         if user_update.is_active is not None:
             user.is_active = user_update.is_active
 
@@ -176,7 +241,52 @@ async def update_user(
     await db.commit()
     await db.refresh(user)
 
+    if not user.permissions:
+        user.permissions = get_default_permissions_for_role(
+            role=user.role,
+            can_manage_automations=user.can_manage_automations,
+            can_edit_projects=user.can_edit_projects,
+            can_manage_billing=user.can_manage_billing,
+        )
+
     logger.info(f"User updated: {user.email} by {current_user.email}")
+    return ApiResponse(data=UserOut.model_validate(user))
+
+
+@router.put("/{user_id}/permissions", response_model=ApiResponse[UserOut])
+async def update_user_permissions(
+    user_id: uuid.UUID,
+    perms_update: UserPermissionsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Dedicated Super Admin endpoint to assign and grant module permissions to a team member with ease.
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Agency Super Admins have clearance to assign software permissions.",
+        )
+
+    query = select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    cleaned_perms = list(set(perms_update.permissions))
+    user.permissions = cleaned_perms
+
+    # Sync backward-compatible flags
+    user.can_manage_automations = "automations:write" in cleaned_perms or "automations:*" in cleaned_perms
+    user.can_manage_billing = "billing:write" in cleaned_perms or "billing:*" in cleaned_perms
+    user.can_edit_projects = "projects:write" in cleaned_perms or "projects:*" in cleaned_perms
+
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info(f"Permissions updated for user {user.email}: {len(cleaned_perms)} grants assigned by Super Admin {current_user.email}")
     return ApiResponse(data=UserOut.model_validate(user))
 
 

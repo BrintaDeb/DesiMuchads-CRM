@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import User
 from app.models.enums import UserRole
+from app.core.permissions import get_default_permissions_for_role, ALL_PERMISSION_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -220,3 +221,69 @@ def require_roles(allowed_roles: List[UserRole]):
             )
         return current_user
     return role_checker
+
+
+def require_permission(required_permission: str):
+    """
+    Ensures the user has the specified granular permission (e.g. 'crm:read', 'leads:write').
+    Super Admins always bypass with full system access.
+    """
+    async def permission_checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role == UserRole.SUPER_ADMIN:
+            return current_user
+
+        user_perms = current_user.permissions
+        if not user_perms:
+            user_perms = get_default_permissions_for_role(
+                role=current_user.role,
+                can_manage_automations=current_user.can_manage_automations,
+                can_edit_projects=current_user.can_edit_projects,
+                can_manage_billing=current_user.can_manage_billing,
+            )
+
+        if "*" in user_perms or required_permission in user_perms:
+            return current_user
+
+        # Check module-level wildcard, e.g. "crm:*" grants "crm:read" and "crm:write"
+        module = required_permission.split(":")[0]
+        if f"{module}:*" in user_perms or f"{module}:write" in user_perms and required_permission.endswith(":read"):
+            return current_user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access forbidden: requires permission '{required_permission}'. Contact your Agency Super Admin.",
+        )
+
+    return permission_checker
+
+
+def require_any_permission(required_permissions: List[str]):
+    """
+    Ensures the user has at least one of the specified permissions.
+    """
+    async def multi_permission_checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role == UserRole.SUPER_ADMIN:
+            return current_user
+
+        user_perms = current_user.permissions
+        if not user_perms:
+            user_perms = get_default_permissions_for_role(
+                role=current_user.role,
+                can_manage_automations=current_user.can_manage_automations,
+                can_edit_projects=current_user.can_edit_projects,
+                can_manage_billing=current_user.can_manage_billing,
+            )
+
+        for perm in required_permissions:
+            if "*" in user_perms or perm in user_perms:
+                return current_user
+            module = perm.split(":")[0]
+            if f"{module}:*" in user_perms:
+                return current_user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access forbidden: requires one of permissions {required_permissions}.",
+        )
+
+    return multi_permission_checker

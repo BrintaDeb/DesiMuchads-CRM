@@ -29,6 +29,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { User, UserRole } from "@/types";
 import { OdooControlPanel, ViewMode } from "@/components/layout/OdooControlPanel";
+import { UserPermissionsModal } from "@/components/team/UserPermissionsModal";
 
 const initialDemoUsers: User[] = [
   {
@@ -110,6 +111,7 @@ export default function TeamManagementPage() {
   const [newCanManageAutomations, setNewCanManageAutomations] = useState(false);
   const [newCanEditProjects, setNewCanEditProjects] = useState(true);
   const [newCanManageBilling, setNewCanManageBilling] = useState(false);
+  const [newPermissions, setNewPermissions] = useState<string[]>([]);
 
   // Edit Member Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -123,6 +125,15 @@ export default function TeamManagementPage() {
   const [editCanEditProjects, setEditCanEditProjects] = useState(true);
   const [editCanManageBilling, setEditCanManageBilling] = useState(false);
   const [editPassword, setEditPassword] = useState("");
+
+  // Granular Permissions Modal State
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<User | null>(null);
+
+  const openPermissionsModal = (u: User) => {
+    setSelectedUserForPermissions(u);
+    setIsPermissionsModalOpen(true);
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -166,6 +177,7 @@ export default function TeamManagementPage() {
         can_manage_automations: newCanManageAutomations,
         can_edit_projects: newCanEditProjects,
         can_manage_billing: newCanManageBilling,
+        permissions: newPermissions.length > 0 ? newPermissions : undefined,
         is_active: true,
       };
 
@@ -186,6 +198,7 @@ export default function TeamManagementPage() {
           can_manage_automations: newCanManageAutomations,
           can_edit_projects: newCanEditProjects,
           can_manage_billing: newCanManageBilling,
+          permissions: newPermissions,
           is_active: true,
           created_at: new Date().toISOString(),
         };
@@ -214,6 +227,7 @@ export default function TeamManagementPage() {
     setNewCanManageAutomations(false);
     setNewCanEditProjects(true);
     setNewCanManageBilling(false);
+    setNewPermissions([]);
   };
 
   const openEditModal = (u: User) => {
@@ -524,36 +538,77 @@ export default function TeamManagementPage() {
                       </span>
                     </div>
 
-                    {/* Automation Permission Spotlight */}
+                    {/* Module Permissions Strip */}
                     <div className="mt-3">
-                      {u.can_manage_automations ? (
-                        <div className="flex items-center justify-between p-2 rounded-md bg-purple-50/80 border border-purple-200/80 text-purple-900 text-xs">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <Zap className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
-                            <span>Automation Lead</span>
-                          </span>
-                          <span className="text-[10px] bg-purple-200/60 text-purple-800 px-1.5 py-0.5 rounded font-mono">
-                            Full Engine Access
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between p-2 rounded-md bg-zinc-50 border border-zinc-200 text-zinc-500 text-xs">
-                          <span className="flex items-center gap-1.5 font-normal">
-                            <Shield className="w-3.5 h-3.5 text-zinc-400" />
-                            <span>Standard Specialist</span>
-                          </span>
-                          <button
-                            onClick={() => handleToggleAutomationAccess(u)}
-                            className="text-[10px] text-purple-700 hover:underline font-medium"
-                          >
-                            + Enable Automation
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-[#714B67]" />
+                          Module Clearance
+                        </span>
+                        <button
+                          onClick={() => openPermissionsModal(u)}
+                          className="text-[10px] text-[#714B67] hover:underline font-bold"
+                        >
+                          Configure
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const perms = u.permissions || [];
+                          const isSuper = u.role === "SUPER_ADMIN" || perms.includes("*");
+                          const has = (mod: string) => isSuper || perms.some((p) => p.startsWith(mod));
+
+                          return (
+                            <>
+                              {has("crm") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                  CRM
+                                </span>
+                              )}
+                              {has("leads") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                  AI Leads
+                                </span>
+                              )}
+                              {has("projects") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  Projects
+                                </span>
+                              )}
+                              {has("content") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-pink-50 text-pink-700 border border-pink-200">
+                                  Content
+                                </span>
+                              )}
+                              {has("attendance") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                                  Attendance
+                                </span>
+                              )}
+                              {has("billing") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  Billing
+                                </span>
+                              )}
+                              {has("vault") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                  Vault
+                                </span>
+                              )}
+                              {has("automations") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-purple-100 text-purple-800 border border-purple-300">
+                                  Automations
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
 
                     {/* Operational Details */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
+                    <div className="mt-3.5 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-zinc-400 block text-[10px] uppercase font-semibold">Hourly Rate</span>
                         <span className="font-mono font-medium text-zinc-800">
@@ -576,16 +631,24 @@ export default function TeamManagementPage() {
                         u.is_active ? "text-rose-600 hover:text-rose-800" : "text-emerald-600 hover:text-emerald-800"
                       )}
                     >
-                      {u.is_active ? "Deactivate User" : "Activate User"}
+                      {u.is_active ? "Deactivate" : "Activate"}
                     </button>
 
-                    <button
-                      onClick={() => openEditModal(u)}
-                      className="text-[11px] text-[#714B67] hover:underline font-medium flex items-center gap-1"
-                    >
-                      <span>Permissions</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => openEditModal(u)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-900 px-2 py-1 rounded hover:bg-zinc-100 font-medium transition"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onClick={() => openPermissionsModal(u)}
+                        className="text-[11px] text-[#714B67] hover:bg-purple-50 bg-purple-50/50 px-2.5 py-1 rounded font-semibold flex items-center gap-1 transition border border-[#714B67]/30 shadow-xs"
+                      >
+                        <Shield className="w-3 h-3 text-[#714B67]" />
+                        <span>Permissions</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -665,12 +728,22 @@ export default function TeamManagementPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => openEditModal(u)}
-                          className="px-2 py-1 text-xs text-[#714B67] hover:bg-purple-50 rounded font-medium transition"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openPermissionsModal(u)}
+                            className="px-2 py-1 text-xs text-[#714B67] bg-purple-50 hover:bg-purple-100 border border-purple-200/80 rounded font-semibold transition flex items-center gap-1 shadow-xs"
+                            title="Assign & configure module permissions"
+                          >
+                            <Shield className="w-3 h-3 text-[#714B67]" />
+                            <span>Permissions</span>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(u)}
+                            className="px-2 py-1 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded font-medium transition"
+                          >
+                            Profile
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -814,8 +887,48 @@ export default function TeamManagementPage() {
               {/* Automation & Access Grants Section */}
               <div className="pt-3 border-t border-zinc-200">
                 <span className="block text-xs font-semibold text-zinc-900 mb-2 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-purple-600" /> Granular Access & Software Automation Grants
+                  <ShieldAlert className="w-4 h-4 text-purple-600" /> Granular Access & Software Module Permissions
                 </span>
+
+                <div className="mb-3">
+                  <label className="block text-[11px] font-semibold text-zinc-600 mb-1">
+                    1-Click Clearance Preset
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5 text-xs">
+                    {[
+                      {
+                        name: "🎯 Sales & Leads",
+                        perms: ["crm:read", "crm:write", "leads:read", "leads:write", "projects:read", "attendance:read", "attendance:write"],
+                        auto: true, proj: false, bill: false,
+                      },
+                      {
+                        name: "🎨 Creative Media",
+                        perms: ["projects:read", "projects:write", "content:read", "content:write", "vault:read", "attendance:read", "attendance:write"],
+                        auto: false, proj: true, bill: false,
+                      },
+                      {
+                        name: "👑 Full Admin",
+                        perms: ["*"],
+                        auto: true, proj: true, bill: true,
+                      },
+                    ].map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setNewPermissions(p.perms);
+                          setNewCanManageAutomations(p.auto);
+                          setNewCanEditProjects(p.proj);
+                          setNewCanManageBilling(p.bill);
+                          toast.info(`Preset applied: ${p.name}`);
+                        }}
+                        className="p-1.5 border border-zinc-200 hover:border-[#714B67] hover:bg-purple-50/50 rounded text-center text-[11px] font-medium transition"
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="space-y-2.5">
                   <label className="flex items-start gap-2.5 p-2.5 rounded-md border border-purple-200 bg-purple-50/60 cursor-pointer">
@@ -1036,6 +1149,25 @@ export default function TeamManagementPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* GRANULAR PERMISSIONS & ACCESS CONTROL MODAL                               */}
+      {/* ========================================================================= */}
+      {isPermissionsModalOpen && selectedUserForPermissions && (
+        <UserPermissionsModal
+          isOpen={isPermissionsModalOpen}
+          onClose={() => {
+            setIsPermissionsModalOpen(false);
+            setSelectedUserForPermissions(null);
+          }}
+          user={selectedUserForPermissions}
+          onPermissionsUpdated={(updatedUser) => {
+            setUsers((prev) =>
+              prev.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+            );
+          }}
+        />
       )}
     </div>
   );

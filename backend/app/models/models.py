@@ -55,6 +55,7 @@ class User(Base):
     can_manage_automations: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     can_edit_projects: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     can_manage_billing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    permissions: Mapped[Optional[list]] = mapped_column(JSON, default=list, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

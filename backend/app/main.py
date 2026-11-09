@@ -36,6 +36,7 @@ from app.models.enums import (
     CalendarEventType,
     InvoiceStatus,
 )
+from app.core.permissions import ALL_PERMISSION_IDS, get_default_permissions_for_role
 
 # API Routers
 from app.api.v1.auth import router as auth_router
@@ -76,6 +77,18 @@ async def seed_initial_agency_data():
             admin_user.can_manage_automations = True
             admin_user.can_edit_projects = True
             admin_user.can_manage_billing = True
+            admin_user.permissions = ALL_PERMISSION_IDS
+
+            # Ensure other existing users have permissions
+            all_users_res = await session.execute(select(User))
+            for u in all_users_res.scalars().all():
+                if not u.permissions:
+                    u.permissions = get_default_permissions_for_role(
+                        role=u.role,
+                        can_manage_automations=u.can_manage_automations,
+                        can_edit_projects=u.can_edit_projects,
+                        can_manage_billing=u.can_manage_billing,
+                    )
             # Also check if demo automation rules need seeding
             rule_check = await session.execute(select(AutomationRule))
             if not rule_check.scalars().first():
@@ -133,6 +146,7 @@ async def seed_initial_agency_data():
                 can_manage_automations=True,
                 can_edit_projects=True,
                 can_manage_billing=True,
+                permissions=ALL_PERMISSION_IDS,
                 is_active=True,
             )
             manager_user = User(
@@ -146,6 +160,7 @@ async def seed_initial_agency_data():
                 can_manage_automations=True,
                 can_edit_projects=True,
                 can_manage_billing=False,
+                permissions=get_default_permissions_for_role(UserRole.ACCOUNT_MANAGER, can_manage_automations=True, can_edit_projects=True, can_manage_billing=False),
                 is_active=True,
             )
             specialist_user = User(
@@ -156,6 +171,10 @@ async def seed_initial_agency_data():
                 department="Creative & Media",
                 hourly_cost=35.0,
                 weekly_capacity_hours=40,
+                can_manage_automations=False,
+                can_edit_projects=True,
+                can_manage_billing=False,
+                permissions=get_default_permissions_for_role(UserRole.SPECIALIST, can_manage_automations=False, can_edit_projects=True, can_manage_billing=False),
                 is_active=True,
             )
             client_user = User(
@@ -166,6 +185,7 @@ async def seed_initial_agency_data():
                 department="External Client",
                 hourly_cost=0.0,
                 weekly_capacity_hours=0,
+                permissions=get_default_permissions_for_role(UserRole.CLIENT),
                 is_active=True,
             )
             session.add_all([admin_user, manager_user, specialist_user, client_user])
@@ -726,8 +746,18 @@ async def background_maintenance_daemon():
 async def lifespan(app: FastAPI):
     # Startup: Ensure tables exist and seed demo data
     logger.info("Initializing database schema...")
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            res = await conn.run_sync(lambda sync_conn: sync_conn.execute(text("PRAGMA table_info(users)")).fetchall())
+            cols = [r[1] for r in res]
+            if "permissions" not in cols:
+                logger.info("Migrating schema: adding 'permissions' column to users table...")
+                await conn.run_sync(lambda sync_conn: sync_conn.execute(text("ALTER TABLE users ADD COLUMN permissions JSON DEFAULT '[]'")))
+        except Exception as e:
+            logger.warning(f"Could not verify users schema: {e}")
+
     await seed_initial_agency_data()
     daemon_task = asyncio.create_task(background_maintenance_daemon())
     yield

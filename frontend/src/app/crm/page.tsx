@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { DealStage } from "@/types";
 import { OdooControlPanel, ViewMode } from "@/components/layout/OdooControlPanel";
 import { LeadGeneratorModal } from "@/components/crm/LeadGeneratorModal";
+import { useAuthStore } from "@/stores/authStore";
 
 interface DealCard {
   id: string;
@@ -112,6 +113,10 @@ const stages: { key: DealStage; label: string; color: string }[] = [
 ];
 
 export default function CRMPage() {
+  const { hasPermission } = useAuthStore();
+  const canCreateDeal = hasPermission("crm:write");
+  const canAccessLeadEngine = hasPermission("leads:read");
+
   const [deals, setDeals] = useState<DealCard[]>(initialDeals);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
@@ -426,7 +431,7 @@ export default function CRMPage() {
       <OdooControlPanel
         appName="CRM"
         viewName="Sales Pipeline"
-        onNewClick={() => setIsNewDealModalOpen(true)}
+        onNewClick={canCreateDeal ? () => setIsNewDealModalOpen(true) : undefined}
         newButtonLabel="New Opportunity"
         activeView={viewMode}
         onViewChange={setViewMode}
@@ -437,14 +442,16 @@ export default function CRMPage() {
         totalAmountText={formatCurrency(totalPipelineValue)}
         secondaryActions={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsLeadGeneratorOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold shadow-xs transition hover:scale-[1.02] active:scale-[0.98]"
-              title="Autonomous Area Lead Discovery & Cold Outreach Engine"
-            >
-              <Sparkles size={13} className="text-amber-300 animate-pulse" />
-              <span>AI Lead Engine</span>
-            </button>
+            {canAccessLeadEngine && (
+              <button
+                onClick={() => setIsLeadGeneratorOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold shadow-xs transition hover:scale-[1.02] active:scale-[0.98]"
+                title="Autonomous Area Lead Discovery & Cold Outreach Engine"
+              >
+                <Sparkles size={13} className="text-amber-300 animate-pulse" />
+                <span>AI Lead Engine</span>
+              </button>
+            )}
             <span className="text-[11px] font-mono px-2 py-1 rounded bg-purple-50 text-[#714B67] border border-purple-200 hidden md:inline-block">
               Zero-Touch OS
             </span>

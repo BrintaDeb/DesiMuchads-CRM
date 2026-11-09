@@ -16,26 +16,29 @@ interface AppTab {
   name: string;
   href: string;
   activePattern: string;
+  permission?: string;
 }
 
 const topTabs: AppTab[] = [
-  { name: "CRM", href: "/crm", activePattern: "/crm" },
-  { name: "Projects & Tasks", href: "/tasks", activePattern: "/tasks" },
-  { name: "Content Approvals", href: "/content-calendar", activePattern: "/content-calendar" },
-  { name: "Attendance & HR", href: "/attendance", activePattern: "/attendance" },
-  { name: "Billing & GST", href: "/billing", activePattern: "/billing" },
+  { name: "CRM", href: "/crm", activePattern: "/crm", permission: "crm:read" },
+  { name: "Projects & Tasks", href: "/tasks", activePattern: "/tasks", permission: "projects:read" },
+  { name: "Content Approvals", href: "/content-calendar", activePattern: "/content-calendar", permission: "content:read" },
+  { name: "Attendance & HR", href: "/attendance", activePattern: "/attendance", permission: "attendance:read" },
+  { name: "Billing & GST", href: "/billing", activePattern: "/billing", permission: "billing:read" },
   { name: "Calendar", href: "/calendar", activePattern: "/calendar" },
-  { name: "Team", href: "/team", activePattern: "/team" },
-  { name: "Automations", href: "/automations", activePattern: "/automations" },
-  { name: "Brand Vault", href: "/settings/vault", activePattern: "/settings/vault" },
+  { name: "Team", href: "/team", activePattern: "/team", permission: "team:read" },
+  { name: "Automations", href: "/automations", activePattern: "/automations", permission: "automations:read" },
+  { name: "Brand Vault", href: "/settings/vault", activePattern: "/settings/vault", permission: "vault:read" },
 ];
 
 export function TopHeader() {
   const pathname = usePathname();
   const { setCommandPaletteOpen } = useUIStore();
-  const { user, logout } = useAuthStore();
+  const { user, logout, hasPermission } = useAuthStore();
   const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const accessibleTabs = topTabs.filter((tab) => !tab.permission || hasPermission(tab.permission));
 
   return (
     <>
@@ -68,7 +71,7 @@ export function TopHeader() {
 
           {/* App Navigation Tabs */}
           <nav className="hidden md:flex items-center gap-0.5 text-xs font-medium">
-            {topTabs.map((tab) => {
+            {accessibleTabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(tab.activePattern);
               return (
                 <Link

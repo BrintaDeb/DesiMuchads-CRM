@@ -18,6 +18,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { InvoiceStatus } from "@/types";
 import { OdooControlPanel, ViewMode } from "@/components/layout/OdooControlPanel";
+import { useAuthStore } from "@/stores/authStore";
 
 interface InvoiceRow {
   id: string;
@@ -74,6 +75,10 @@ const initialInvoices: InvoiceRow[] = [
 ];
 
 export default function BillingPage() {
+  const { hasPermission } = useAuthStore();
+  const canReadBilling = hasPermission("billing:read");
+  const canWriteBilling = hasPermission("billing:write");
+
   const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,7 +133,7 @@ export default function BillingPage() {
       <OdooControlPanel
         appName="Invoicing"
         viewName="Customer Invoices & GST Ledger"
-        onNewClick={() => toast.info("New invoice creation: Go to CRM or client portal")}
+        onNewClick={canWriteBilling ? () => toast.info("New invoice creation: Go to CRM or client portal") : undefined}
         newButtonLabel="Create Invoice"
         activeView={viewMode}
         onViewChange={setViewMode}
@@ -146,7 +151,18 @@ export default function BillingPage() {
         }
       />
 
-      <div className="space-y-6">
+      {!canReadBilling ? (
+        <div className="bg-white border border-amber-200 rounded-xl p-8 text-center space-y-3 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+            <Receipt size={22} />
+          </div>
+          <h4 className="font-bold text-sm text-zinc-900">Restricted Billing & Invoicing Clearance</h4>
+          <p className="text-xs text-zinc-500 max-w-md mx-auto">
+            Your account does not have <span className="font-mono text-purple-700 font-semibold">billing:read</span> permissions. Contact your Agency Super Admin to grant Billing & GST clearance.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
         {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
@@ -282,6 +298,7 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* UPI QR Payment Modal */}
       <dialog

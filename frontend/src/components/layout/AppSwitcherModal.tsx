@@ -15,7 +15,9 @@ import {
   Zap,
   X,
   Search,
+  Lock,
 } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
 
 interface AppItem {
   id: string;
@@ -24,6 +26,7 @@ interface AppItem {
   href: string;
   color: string;
   icon: React.ElementType;
+  permission?: string;
 }
 
 const odooApps: AppItem[] = [
@@ -34,6 +37,7 @@ const odooApps: AppItem[] = [
     href: "/crm",
     color: "bg-orange-500",
     icon: Users,
+    permission: "crm:read",
   },
   {
     id: "tasks",
@@ -42,6 +46,7 @@ const odooApps: AppItem[] = [
     href: "/tasks",
     color: "bg-indigo-600",
     icon: KanbanSquare,
+    permission: "projects:read",
   },
   {
     id: "attendance",
@@ -50,6 +55,7 @@ const odooApps: AppItem[] = [
     href: "/attendance",
     color: "bg-teal-600",
     icon: Clock,
+    permission: "attendance:read",
   },
   {
     id: "content",
@@ -58,6 +64,7 @@ const odooApps: AppItem[] = [
     href: "/content-calendar",
     color: "bg-pink-600",
     icon: CheckSquare,
+    permission: "content:read",
   },
   {
     id: "billing",
@@ -66,6 +73,7 @@ const odooApps: AppItem[] = [
     href: "/billing",
     color: "bg-emerald-600",
     icon: Receipt,
+    permission: "billing:read",
   },
   {
     id: "calendar",
@@ -90,6 +98,7 @@ const odooApps: AppItem[] = [
     href: "/settings/vault",
     color: "bg-slate-700",
     icon: ShieldCheck,
+    permission: "vault:read",
   },
   {
     id: "dashboard",
@@ -102,10 +111,11 @@ const odooApps: AppItem[] = [
   {
     id: "team",
     name: "Team & Workforce",
-    description: "Provision member logins, assign departments, and grant automation permissions",
+    description: "Provision member logins, assign departments, and grant software module permissions",
     href: "/team",
     color: "bg-blue-600",
     icon: Users,
+    permission: "team:read",
   },
   {
     id: "automations",
@@ -114,6 +124,7 @@ const odooApps: AppItem[] = [
     href: "/automations",
     color: "bg-purple-600",
     icon: Zap,
+    permission: "automations:read",
   },
 ];
 
@@ -125,6 +136,7 @@ interface AppSwitcherModalProps {
 export function AppSwitcherModal({ open, onClose }: AppSwitcherModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [filter, setFilter] = React.useState("");
+  const { hasPermission } = useAuthStore();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -186,6 +198,33 @@ export function AppSwitcherModal({ open, onClose }: AppSwitcherModalProps) {
         <div className="p-6 overflow-y-auto grid grid-cols-3 sm:grid-cols-3 gap-4">
           {filteredApps.map((app) => {
             const Icon = app.icon;
+            const isAccessible = !app.permission || hasPermission(app.permission);
+
+            if (!isAccessible) {
+              return (
+                <div
+                  key={app.id}
+                  className="flex flex-col items-center text-center p-3.5 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 opacity-60 cursor-not-allowed select-none relative group"
+                  title="Access restricted: contact your Agency Super Admin to grant clearance"
+                >
+                  <div
+                    className={`w-14 h-14 rounded-2xl ${app.color} opacity-50 text-white flex items-center justify-center shadow-xs mb-2 relative`}
+                  >
+                    <Icon size={26} strokeWidth={2} />
+                    <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center border-2 border-white shadow-xs">
+                      <Lock size={11} />
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {app.name}
+                  </span>
+                  <span className="text-[10px] text-amber-600 font-medium mt-0.5">
+                    Locked / Restricted
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={app.id}

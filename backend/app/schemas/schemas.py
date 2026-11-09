@@ -87,6 +87,7 @@ class UserBase(BaseModel):
     can_manage_automations: bool = False
     can_edit_projects: bool = True
     can_manage_billing: bool = False
+    permissions: Optional[List[str]] = Field(default_factory=list)
     is_active: bool = True
 
 
@@ -103,8 +104,41 @@ class UserUpdate(BaseModel):
     can_manage_automations: Optional[bool] = None
     can_edit_projects: Optional[bool] = None
     can_manage_billing: Optional[bool] = None
+    permissions: Optional[List[str]] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
+
+
+class UserPermissionsUpdate(BaseModel):
+    permissions: List[str]
+
+
+class PermissionItem(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
+class PermissionModule(BaseModel):
+    id: str
+    name: str
+    icon: str
+    description: str
+    permissions: List[PermissionItem]
+
+
+class PermissionPreset(BaseModel):
+    id: str
+    name: str
+    badge: str
+    description: str
+    permissions: List[str]
+
+
+class PermissionMatrixResponse(BaseModel):
+    modules: List[PermissionModule]
+    presets: List[PermissionPreset]
+    all_permissions: List[str]
 
 
 class UserOut(UserBase):

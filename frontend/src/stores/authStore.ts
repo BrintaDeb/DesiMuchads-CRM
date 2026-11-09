@@ -12,9 +12,44 @@ interface AuthState {
   login: (token: string, user: User) => void;
   logout: () => Promise<void>;
   initializeAuth: () => void;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+function getDefaultRolePermissions(user: User): string[] {
+  if (user.role === "SUPER_ADMIN") {
+    return [
+      "crm:read", "crm:write",
+      "leads:read", "leads:write",
+      "projects:read", "projects:write",
+      "content:read", "content:write",
+      "attendance:read", "attendance:write",
+      "billing:read", "billing:write",
+      "vault:read", "vault:write",
+      "automations:read", "automations:write",
+      "team:read", "team:write",
+    ];
+  }
+  const perms = ["attendance:read", "attendance:write"];
+  if (user.role === "ACCOUNT_MANAGER") {
+    perms.push(
+      "crm:read", "crm:write",
+      "leads:read",
+      "projects:read", "projects:write",
+      "content:read", "content:write",
+      "vault:read", "team:read"
+    );
+  } else if (user.role === "SPECIALIST") {
+    perms.push("projects:read", "projects:write", "content:read", "content:write", "vault:read");
+  } else if (user.role === "CLIENT") {
+    perms.push("projects:read", "content:read", "content:write");
+  }
+  if (user.can_manage_automations) perms.push("automations:read", "automations:write", "leads:read", "leads:write");
+  if (user.can_manage_billing) perms.push("billing:read", "billing:write");
+  return perms;
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -100,6 +135,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isLoading: false,
     });
+  },
+
+  hasPermission: (permission: string) => {
+    const user = get().user;
+    if (!user) return false;
+    if (user.role === "SUPER_ADMIN") return true;
+
+    const perms =
+      user.permissions && user.permissions.length > 0
+        ? user.permissions
+        : getDefaultRolePermissions(user);
+
+    if (perms.includes("*") || perms.includes(permission)) return true;
+
+    const module = permission.split(":")[0];
+    if (perms.includes(`${module}:*`)) return true;
+    if (permission.endsWith(":read") && perms.includes(`${module}:write`)) return true;
+
+    // Backward compatibility with flags
+    if (module === "automations" && user.can_manage_automations) return true;
+    if (module === "billing" && user.can_manage_billing) return true;
+    if (module === "projects" && user.can_edit_projects) return true;
+
+    return false;
+  },
+
+  hasAnyPermission: (permissions: string[]) => {
+    const hasPermission = get().hasPermission;
+    return permissions.some((p) => hasPermission(p));
   },
 }));
 
