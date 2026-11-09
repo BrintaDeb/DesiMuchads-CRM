@@ -252,3 +252,4 @@ def get_default_permissions_for_role(
         perms.add("billing:write")
 
     return sorted(list(perms))
+

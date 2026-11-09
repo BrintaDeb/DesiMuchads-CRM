@@ -18,3 +18,4 @@ services:
         value: "false"
       - key: REDIS_URL
         value: ""
+
