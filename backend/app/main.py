@@ -78,10 +78,14 @@ async def seed_initial_agency_data():
             admin_user.can_edit_projects = True
             admin_user.can_manage_billing = True
             admin_user.permissions = ALL_PERMISSION_IDS
+            if not admin_user.employee_id:
+                admin_user.employee_id = "DM-ADMIN-001"
 
-            # Ensure other existing users have permissions
+            # Ensure other existing users have permissions and employee IDs
             all_users_res = await session.execute(select(User))
             for u in all_users_res.scalars().all():
+                if not u.employee_id:
+                    u.employee_id = f"DM-EMP-{str(u.id)[:4].upper()}"
                 if not u.permissions:
                     u.permissions = get_default_permissions_for_role(
                         role=u.role,
@@ -755,6 +759,9 @@ async def lifespan(app: FastAPI):
             if "permissions" not in cols:
                 logger.info("Migrating schema: adding 'permissions' column to users table...")
                 await conn.run_sync(lambda sync_conn: sync_conn.execute(text("ALTER TABLE users ADD COLUMN permissions JSON DEFAULT '[]'")))
+            if "employee_id" not in cols:
+                logger.info("Migrating schema: adding 'employee_id' column to users table...")
+                await conn.run_sync(lambda sync_conn: sync_conn.execute(text("ALTER TABLE users ADD COLUMN employee_id VARCHAR(50)")))
         except Exception as e:
             logger.warning(f"Could not verify users schema: {e}")
 

@@ -7,7 +7,7 @@ from sqlalchemy import select, func, or_
 import logging
 
 from app.core.database import get_db
-from app.core.security import get_current_user, hash_password
+from app.core.security import get_current_user, hash_password, verify_password
 from app.core.permissions import (
     ALL_MODULES,
     PERMISSION_PRESETS,
@@ -23,6 +23,8 @@ from app.schemas.schemas import (
     UserUpdate,
     UserPermissionsUpdate,
     PermissionMatrixResponse,
+    AdminPasswordVerifyRequest,
+    AdminResetPasswordRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -132,7 +134,16 @@ async def create_user(
             can_manage_billing=user_in.can_manage_billing,
         )
 
+    # Generate employee_id if omitted
+    emp_id = user_in.employee_id
+    if not emp_id:
+        count_query = select(func.count(User.id))
+        count_res = await db.execute(count_query)
+        total_existing = count_res.scalar_one() or 0
+        emp_id = f"DM-EMP-{100 + total_existing + 1}"
+
     new_user = User(
+        employee_id=emp_id,
         email=user_in.email.lower().strip(),
         password_hash=hashed_pwd,
         full_name=user_in.full_name.strip(),
@@ -153,6 +164,28 @@ async def create_user(
 
     logger.info(f"User created: {new_user.email} (Role: {new_user.role.value}, Permissions count: {len(new_user.permissions or [])}) by {current_user.email}")
     return ApiResponse(data=UserOut.model_validate(new_user))
+
+
+@router.post("/verify-admin-password", response_model=ApiResponse[dict])
+async def verify_admin_password(
+    req: AdminPasswordVerifyRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Verifies that the current user has SUPER_ADMIN role and provided valid admin password.
+    Used to gate critical administrative actions like credential provisioning.
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative privileges required.",
+        )
+    if not verify_password(req.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect admin master password.",
+        )
+    return ApiResponse(data={"verified": True, "message": "Admin authorization granted."})
 
 
 @router.get("/{user_id}", response_model=ApiResponse[UserOut])
@@ -205,6 +238,8 @@ async def update_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Update basic fields if provided
+    if user_update.employee_id is not None:
+        user.employee_id = user_update.employee_id.strip()
     if user_update.full_name is not None:
         user.full_name = user_update.full_name.strip()
     if user_update.department is not None:
@@ -287,6 +322,47 @@ async def update_user_permissions(
     await db.refresh(user)
 
     logger.info(f"Permissions updated for user {user.email}: {len(cleaned_perms)} grants assigned by Super Admin {current_user.email}")
+    return ApiResponse(data=UserOut.model_validate(user))
+
+
+@router.put("/{user_id}/credentials", response_model=ApiResponse[UserOut])
+async def admin_reset_user_credentials(
+    user_id: uuid.UUID,
+    creds: AdminResetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Super Admin endpoint to directly reset an employee's password and/or assign a new Employee ID.
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Agency Super Admins can reset team member credentials.",
+        )
+
+    query = select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.password_hash = hash_password(creds.new_password)
+    if creds.employee_id:
+        user.employee_id = creds.employee_id.strip()
+
+    await db.commit()
+    await db.refresh(user)
+
+    if not user.permissions:
+        user.permissions = get_default_permissions_for_role(
+            role=user.role,
+            can_manage_automations=user.can_manage_automations,
+            can_edit_projects=user.can_edit_projects,
+            can_manage_billing=user.can_manage_billing,
+        )
+
+    logger.info(f"Super Admin {current_user.email} updated credentials for {user.email} (Emp ID: {user.employee_id})")
     return ApiResponse(data=UserOut.model_validate(user))
 
 

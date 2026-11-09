@@ -95,44 +95,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }
 
-    // Automatically authenticate with default Super Admin so all API calls have valid tokens
-    try {
-      const res = await api.post("/auth/login", {
-        email: "admin@desimuchads.com",
-        password: "admin123456",
-      });
-      const data = res.data?.data;
-      if (data?.access_token && data?.user) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("muchad_access_token", data.access_token);
-          localStorage.setItem("muchad_user", JSON.stringify(data.user));
-        }
-        set({
-          user: data.user,
-          token: data.access_token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        return;
-      }
-    } catch {}
-
-    // Fallback demo user
-    const demoSuperAdmin: User = {
-      id: "900a1903-36eb-407f-8c18-42de3f13706f",
-      email: "admin@desimuchads.com",
-      full_name: "Muchad Founder (Super Admin)",
-      role: "SUPER_ADMIN",
-      department: "Executive Leadership",
-      hourly_cost: 100,
-      weekly_capacity_hours: 40,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    };
+    // Require explicit authentication (no auto-bypass)
     set({
-      user: demoSuperAdmin,
-      token: "demo_token_super_admin",
-      isAuthenticated: true,
+      user: null,
+      token: null,
+      isAuthenticated: false,
       isLoading: false,
     });
   },

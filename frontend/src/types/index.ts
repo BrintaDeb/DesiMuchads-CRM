@@ -26,6 +26,7 @@ export type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED";
 
 export interface User {
   id: string;
+  employee_id?: string;
   email: string;
   full_name: string;
   role: UserRole;

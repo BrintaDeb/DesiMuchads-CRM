@@ -21,6 +21,10 @@ import {
   Layers,
   Star,
   MoreVertical,
+  MessageSquare,
+  Zap,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -157,6 +161,32 @@ export default function CRMPage() {
   // Drag and drop state
   const [draggingDealId, setDraggingDealId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<DealStage | null>(null);
+
+  // Fast Action to Reply State
+  const [fastReplyDeal, setFastReplyDeal] = useState<DealCard | null>(null);
+  const [fastReplyTab, setFastReplyTab] = useState<"instant" | "audit" | "closing">("instant");
+
+  const getFastReplyContent = (deal: DealCard, tab: "instant" | "audit" | "closing") => {
+    if (tab === "instant") {
+      return {
+        title: "5-Minute Instant Response",
+        subject: `Quick follow-up for ${deal.company_name} — The Desi Muchads`,
+        body: `Hi ${deal.contact_name},\n\nJust reviewed your business profile for ${deal.company_name}. We’ve put together a specialized strategy sprint for your ${deal.industry} market that addresses your primary growth bottlenecks.\n\nAre you available for a quick 10-minute strategy overview today?`,
+      };
+    }
+    if (tab === "audit") {
+      return {
+        title: "Strategy Audit & Teardown",
+        subject: `Custom Deliverable Audit for ${deal.company_name}`,
+        body: `Hi ${deal.contact_name},\n\nOur creative & performance team finished a preliminary digital audit for ${deal.company_name}. We spotted 3 key optimization levers that can immediately boost conversions without increasing ad spend.\n\nWould you like me to share our video teardown or send across the PDF proposal?`,
+      };
+    }
+    return {
+      title: "Slot Reservation & Closing",
+      subject: `Reserving your agency retainer sprint — ${deal.company_name}`,
+      body: `Hi ${deal.contact_name},\n\nHope your week is going well! Following up on the ${formatCurrency(deal.deal_value)} monthly sprint for ${deal.company_name}. We have 1 client onboarding slot available for this sprint cycle starting Monday.\n\nCan I send over the formal agreement for your signature today so we can reserve your onboarding date?`,
+    };
+  };
 
   // Dialog Refs
   const newDealDialogRef = useRef<HTMLDialogElement>(null);
@@ -596,6 +626,15 @@ export default function CRMPage() {
 
                         <div className="flex items-center gap-1">
                           <button
+                            onClick={() => setFastReplyDeal(deal)}
+                            className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
+                            title="Fast Action to Reply (WhatsApp, Email & 3-Touch Follow-up)"
+                          >
+                            <Zap size={11} className="text-emerald-600 fill-emerald-600" />
+                            <span>Reply</span>
+                          </button>
+
+                          <button
                             onClick={() => openProposalStudio(deal)}
                             className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded bg-purple-50 text-[#714B67] hover:bg-purple-100 border border-purple-200 transition-colors"
                             title="Generate AI Proposal & PDF"
@@ -674,6 +713,14 @@ export default function CRMPage() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setFastReplyDeal(deal)}
+                          className="px-2 py-1 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold text-xs border border-emerald-300 flex items-center gap-1 shadow-2xs"
+                          title="Fast Action to Reply"
+                        >
+                          <Zap size={11} className="text-emerald-600 fill-emerald-600" />
+                          <span>Reply</span>
+                        </button>
                         <button
                           onClick={() => openProposalStudio(deal)}
                           className="px-2 py-1 rounded bg-purple-50 text-[#714B67] hover:bg-purple-100 font-medium text-xs border border-purple-200"
@@ -1174,6 +1221,122 @@ export default function CRMPage() {
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Fast Action to Reply Dialog */}
+      {fastReplyDeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Zap size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Fast Action to Reply: {fastReplyDeal.company_name}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {fastReplyDeal.contact_name} • {fastReplyDeal.email} • {fastReplyDeal.phone}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFastReplyDeal(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Template Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+              <button
+                onClick={() => setFastReplyTab("instant")}
+                className={cn(
+                  "py-1.5 rounded-md text-center transition",
+                  fastReplyTab === "instant" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                ⚡ 5-Min Warm Hook
+              </button>
+              <button
+                onClick={() => setFastReplyTab("audit")}
+                className={cn(
+                  "py-1.5 rounded-md text-center transition",
+                  fastReplyTab === "audit" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                📊 Strategy Teardown
+              </button>
+              <button
+                onClick={() => setFastReplyTab("closing")}
+                className={cn(
+                  "py-1.5 rounded-md text-center transition",
+                  fastReplyTab === "closing" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                🤝 Slot Reservation
+              </button>
+            </div>
+
+            {/* Message Preview & Action Suite */}
+            {(() => {
+              const reply = getFastReplyContent(fastReplyDeal, fastReplyTab);
+              const cleanPhone = fastReplyDeal.phone.replace(/[^0-9]/g, "");
+              const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(reply.body)}`;
+              const mailtoUrl = `mailto:${fastReplyDeal.email}?subject=${encodeURIComponent(reply.subject)}&body=${encodeURIComponent(reply.body)}`;
+
+              return (
+                <div className="space-y-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono space-y-2">
+                    <div className="text-[11px] text-slate-500 border-b border-slate-200 pb-1.5">
+                      <span className="font-semibold text-slate-700">Subject: </span>
+                      <span>{reply.subject}</span>
+                    </div>
+                    <p className="text-slate-800 whitespace-pre-wrap leading-relaxed text-[11px]">
+                      {reply.body}
+                    </p>
+                  </div>
+
+                  {/* 1-Click Fast Reply Triggers */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs text-center"
+                    >
+                      <MessageSquare size={13} />
+                      <span>WhatsApp</span>
+                      <ExternalLink size={11} className="opacity-70" />
+                    </a>
+
+                    <a
+                      href={mailtoUrl}
+                      className="py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs text-center"
+                    >
+                      <Mail size={13} />
+                      <span>Send Email</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(reply.body);
+                        toast.success(`Copied "${reply.title}" to clipboard!`);
+                      }}
+                      className="py-2.5 px-3 bg-purple-50 hover:bg-purple-100 text-[#714B67] border border-purple-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
+                    >
+                      <Copy size={13} />
+                      <span>Copy Pitch</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

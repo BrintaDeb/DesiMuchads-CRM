@@ -28,7 +28,19 @@ export default function LoginPage() {
         return;
       }
     } catch (err: any) {
-      // Fallback demo login if backend is restarting or mock
+      if (err.response?.data?.detail) {
+        toast.error(err.response.data.detail);
+        setIsLoading(false);
+        return;
+      }
+      if (err.response?.status === 401 || err.response?.status === 400) {
+        toast.error("Invalid credentials. Please verify your email and password.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Offline network fallback only if server is completely unreachable
+      toast.warning("Server connection offline. Logging into local sandbox session.");
       const role = email.includes("client")
         ? "CLIENT"
         : email.includes("manager")

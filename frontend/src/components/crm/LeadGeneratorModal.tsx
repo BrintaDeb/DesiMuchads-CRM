@@ -34,6 +34,7 @@ import {
   PhoneCall,
   Layers,
   Search,
+  Copy,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -945,19 +946,43 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            {/* Direct WhatsApp Launcher */}
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Fast Action to Reply: 1-Click WhatsApp Launcher */}
                             <a
                               href={lead.whatsapp_click_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                              title="Direct Click-to-Chat on WhatsApp with Localized Hook"
+                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs"
+                              title="Fast Action to Reply: Launch WhatsApp with Tailored Pitch"
                             >
                               <MessageSquare className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">WhatsApp</span>
+                              <span className="hidden sm:inline">Fast WhatsApp</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
                             </a>
+
+                            {/* Fast Action to Reply: 1-Click Fast Email */}
+                            <a
+                              href={`mailto:${lead.email}?subject=${encodeURIComponent(lead.cold_email_subject)}&body=${encodeURIComponent(lead.cold_email_body)}`}
+                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                              title="Fast Action to Reply: Launch Email with Cold Proposal"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Fast Email</span>
+                            </a>
+
+                            {/* Fast Action to Reply: 1-Click Copy Pitch */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(lead.cold_whatsapp_text);
+                                toast.success(`Fast Reply pitch copied for ${lead.company_name}!`);
+                              }}
+                              className="px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#714B67] border border-purple-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                              title="Fast Action: Copy Tailored Pitch to Clipboard"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="hidden md:inline text-[11px]">Copy Pitch</span>
+                            </button>
 
                             <button
                               onClick={() => setExpandedOutreachId(isExpanded ? null : lead.temp_id)}
@@ -968,7 +993,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
                               )}
                             >
-                              <span>Buyer Dossier</span>
+                              <span>Dossier</span>
                               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
                           </div>

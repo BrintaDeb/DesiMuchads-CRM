@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Grid, LogOut, ShieldCheck, ChevronDown, Sparkles } from "lucide-react";
+import { Search, Grid, LogOut, ShieldCheck, ChevronDown, Sparkles, Lock, LogIn } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { AttendanceWidget } from "./AttendanceWidget";
@@ -115,64 +115,74 @@ export function TopHeader() {
           {/* Real-time Notification Center */}
           <NotificationCenter />
 
-          {/* User Profile Pill with Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="flex items-center gap-1.5 pl-1.5 pr-2 py-0.5 rounded-full hover:bg-white/15 transition-colors"
-            >
-              <div className="w-6 h-6 rounded-full bg-white text-[#714B67] font-bold text-[10px] flex items-center justify-center shadow-xs">
-                {user?.full_name ? user.full_name.charAt(0) : "U"}
-              </div>
-              <span className="hidden xl:inline text-xs font-medium text-white max-w-[100px] truncate">
-                {user?.full_name || "Account"}
-              </span>
-              <ChevronDown size={11} className="text-white/70" />
-            </button>
-
-            {profileDropdownOpen && (
-              <div className="absolute right-0 top-9 z-50 w-52 py-1 bg-white border border-slate-200 rounded-xl shadow-xl flex flex-col text-slate-800 text-xs">
-                <div className="px-3 py-2 border-b border-slate-100 bg-slate-50">
-                  <p className="font-semibold text-slate-900 truncate">{user?.full_name || "Admin"}</p>
-                  <p className="text-[10px] text-slate-500 font-mono truncate">{user?.email || "admin@desimuchads.com"}</p>
-                  <span className="inline-block mt-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {user?.role?.replace("_", " ") || "SUPER ADMIN"}
-                  </span>
+          {/* User Profile Pill with Dropdown or Sign In */}
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className="flex items-center gap-1.5 pl-1.5 pr-2 py-0.5 rounded-full hover:bg-white/15 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-white text-[#714B67] font-bold text-[10px] flex items-center justify-center shadow-xs">
+                  {user.full_name ? user.full_name.charAt(0) : "U"}
                 </div>
+                <span className="hidden xl:inline text-xs font-medium text-white max-w-[100px] truncate">
+                  {user.full_name}
+                </span>
+                <ChevronDown size={11} className="text-white/70" />
+              </button>
 
-                <Link
-                  href="/settings/vault"
-                  onClick={() => setProfileDropdownOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700"
-                >
-                  <ShieldCheck size={13} className="text-slate-400" />
-                  <span>Credential Vault & Security</span>
-                </Link>
+              {profileDropdownOpen && (
+                <div className="absolute right-0 top-9 z-50 w-52 py-1 bg-white border border-slate-200 rounded-xl shadow-xl flex flex-col text-slate-800 text-xs">
+                  <div className="px-3 py-2 border-b border-slate-100 bg-slate-50">
+                    <p className="font-semibold text-slate-900 truncate">{user.full_name || "Admin"}</p>
+                    <p className="text-[10px] text-slate-500 font-mono truncate">{user.email || "admin@desimuchads.com"}</p>
+                    <span className="inline-block mt-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {user.role?.replace("_", " ") || "SUPER ADMIN"}
+                    </span>
+                  </div>
 
-                <Link
-                  href="/client-portal"
-                  onClick={() => setProfileDropdownOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700"
-                >
-                  <Sparkles size={13} className="text-slate-400" />
-                  <span>Client Portal View</span>
-                </Link>
+                  <Link
+                    href="/settings/vault"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700"
+                  >
+                    <ShieldCheck size={13} className="text-slate-400" />
+                    <span>Credential Vault & Security</span>
+                  </Link>
 
-                <div className="border-t border-slate-100 my-1" />
+                  <Link
+                    href="/client-portal"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700"
+                  >
+                    <Sparkles size={13} className="text-slate-400" />
+                    <span>Client Portal View</span>
+                  </Link>
 
-                <button
-                  onClick={() => {
-                    setProfileDropdownOpen(false);
-                    logout();
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 text-left font-medium"
-                >
-                  <LogOut size={13} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            )}
-          </div>
+                  <div className="border-t border-slate-100 my-1" />
+
+                  <button
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      logout();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 text-left font-medium"
+                  >
+                    <LogOut size={13} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-md font-semibold text-xs border border-white/30 shadow-2xs transition"
+            >
+              <LogIn size={13} />
+              <span>Sign In</span>
+            </Link>
+          )}
         </div>
       </header>
 

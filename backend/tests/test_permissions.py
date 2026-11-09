@@ -107,3 +107,49 @@ async def test_assign_user_permissions():
         )
         assert detail_res.status_code == 200
         assert set(detail_res.json()["data"]["permissions"]) == set(new_grants)
+
+
+@pytest.mark.asyncio
+async def test_admin_password_verify_and_credential_management():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        headers = {"Authorization": "Bearer demo_token_super_admin"}
+
+        # 1. Correct master admin password verification
+        v_res = await ac.post("/api/v1/users/verify-admin-password", json={"password": "admin123456"}, headers=headers)
+        assert v_res.status_code == 200
+        assert v_res.json()["data"]["verified"] is True
+
+        # 2. Incorrect master admin password verification
+        bad_v = await ac.post("/api/v1/users/verify-admin-password", json={"password": "wrong_password"}, headers=headers)
+        assert bad_v.status_code == 401
+
+        # 3. Create employee with custom or auto-generated employee_id
+        new_emp = await ac.post(
+            "/api/v1/users",
+            json={
+                "email": "employee.test@desimuchads.com",
+                "password": "EmpTempPassword123!",
+                "full_name": "Test Agency Employee",
+                "role": "SPECIALIST",
+                "department": "Video Production",
+                "employee_id": "DM-EMP-555",
+                "permissions": ["projects:read", "content:write"]
+            },
+            headers=headers
+        )
+        assert new_emp.status_code == 201
+        emp_data = new_emp.json()["data"]
+        assert emp_data["employee_id"] == "DM-EMP-555"
+        created_id = emp_data["id"]
+
+        # 4. Super Admin reset credentials (password & employee_id)
+        reset_res = await ac.put(
+            f"/api/v1/users/{created_id}/credentials",
+            json={
+                "new_password": "NewSecretPassword999!",
+                "employee_id": "DM-EMP-777"
+            },
+            headers=headers
+        )
+        assert reset_res.status_code == 200
+        assert reset_res.json()["data"]["employee_id"] == "DM-EMP-777"

@@ -78,6 +78,7 @@ class UserSessionOut(BaseModel):
 # ==============================================================================
 
 class UserBase(BaseModel):
+    employee_id: Optional[str] = None
     email: EmailStr
     full_name: str
     role: UserRole = UserRole.SPECIALIST
@@ -96,6 +97,7 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
+    employee_id: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     department: Optional[str] = None
@@ -107,6 +109,15 @@ class UserUpdate(BaseModel):
     permissions: Optional[List[str]] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
+
+
+class AdminPasswordVerifyRequest(BaseModel):
+    password: str
+
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=6)
+    employee_id: Optional[str] = None
 
 
 class UserPermissionsUpdate(BaseModel):
