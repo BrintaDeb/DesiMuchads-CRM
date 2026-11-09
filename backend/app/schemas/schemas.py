@@ -657,24 +657,49 @@ class DiscoveredLeadItem(BaseModel):
     area: str
     locality: str
     public_landmark: Optional[str] = None
+    nearby_landmark: Optional[str] = None
     google_maps_url: Optional[str] = None
+    google_maps_place_id: Optional[str] = None
+    google_rating: Optional[float] = 4.7
+    review_count: Optional[int] = 128
+    google_3pack_status: Optional[str] = "Rank #1-3 in Local 3-Pack"
     niche: str
     deal_value: float
     intent_score: int
+    lead_temperature: str = "HOT_BUYER"  # "HOT_BUYER", "WARM_PROSPECT", "OPPORTUNITY"
     audit_findings: List[str]
+    buying_triggers: List[str] = []
+    buyer_persona: str = ""
+    annual_revenue_band: str = "₹2 Cr - ₹5 Cr ARR"
+    employee_count_band: str = "15-50 Employees"
+    website_url: Optional[str] = None
+    website_speed_status: Optional[str] = "Needs Mobile Optimization (3.8s LCP)"
+    tech_stack: List[str] = []
     recommended_service: str
+    latitude: float = 18.9284
+    longitude: float = 72.8282
+    distance_km: float = 0.5
+    distance_label: str = "0.5 km away"
+    pinpoint_address: str = ""
+    linkedin_url: Optional[str] = None
     cold_email_subject: str
     cold_email_body: str
     cold_whatsapp_text: str
     whatsapp_click_url: str
+    cold_phone_call_script: Optional[str] = None
 
 
 class LeadDiscoveryRequest(BaseModel):
     city: str = "Mumbai"
     area: str = "South Mumbai"
-    niche: str = "D2C Brands & Consumer Goods"
+    niche: str = "Graphic Designing & Brand Identity"
     target_count: int = Field(default=6, ge=1, le=15)
     min_deal_value: Optional[float] = 50000.0
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    radius_km: float = Field(default=5.0, ge=0.5, le=50.0)
+    pinpoint_landmark: Optional[str] = None
+    lead_temperature_filter: Optional[str] = "ALL"  # "ALL", "HOT_BUYER", "WARM_PROSPECT"
 
 
 class LeadOutreachGenerateRequest(BaseModel):

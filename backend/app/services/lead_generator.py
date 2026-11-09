@@ -4,8 +4,103 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 import random
 import re
+import math
 
 from app.schemas.schemas import DiscoveredLeadItem, LeadDiscoveryRequest
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance between two GPS coordinates in kilometers."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 2)
+
+
+AREA_COORDINATES: Dict[str, Tuple[float, float]] = {
+    # Mumbai
+    "South Mumbai (Nariman Point & Fort)": (18.9284, 72.8282),
+    "BKC (Bandra Kurla Complex)": (19.0657, 72.8687),
+    "Bandra West & Pali Hill": (19.0596, 72.8295),
+    "Lower Parel (Kamala Mills)": (18.9953, 72.8306),
+    "Andheri West (Lokhandwala & Oshiwara)": (19.1363, 72.8277),
+    "Powai (Hiranandani Gardens)": (19.1176, 72.9060),
+    "Juhu & Vile Parle": (19.1075, 72.8263),
+    # Bengaluru
+    "Indiranagar (100ft Rd & 12th Main)": (12.9784, 77.6408),
+    "Koramangala (4th & 5th Block)": (12.9352, 77.6245),
+    "HSR Layout (27th Main)": (12.9121, 77.6446),
+    "Whitefield & ITPL": (12.9698, 77.7500),
+    "MG Road & Lavelle Road": (12.9719, 77.5978),
+    # Delhi NCR
+    "Cyber City & DLF Phase 2 (Gurugram)": (28.4952, 77.0895),
+    "Golf Course Road & Sector 54": (28.4595, 77.0988),
+    "Connaught Place & Barakhamba": (28.6315, 77.2167),
+    "Aerocity & Worldmark Towers": (28.5494, 77.1211),
+    "Noida Sector 62 & 126 Tech Corridor": (28.6258, 77.3688),
+    # Hyderabad
+    "Hitec City & Madhapur": (17.4474, 78.3762),
+    "Gachibowli & Financial District": (17.4401, 78.3489),
+    "Jubilee Hills & Banjara Hills Road 36": (17.4326, 78.4071),
+    # Pune
+    "Koregaon Park & Kalyani Nagar": (18.5362, 73.8940),
+    "Baner & Balewadi High Street": (18.5590, 73.7868),
+    "Viman Nagar & Kharadi IT Park": (18.5679, 73.9143),
+    # Ahmedabad
+    "SG Highway & Prahlad Nagar": (23.0128, 72.5108),
+    "Bodakdev & Sindhu Bhavan Road": (23.0489, 72.5152),
+    # Kolkata
+    "Park Street & Camac Street": (22.5510, 88.3533),
+    "Salt Lake Sector V & New Town": (22.5804, 88.4312),
+    # Chennai
+    "Nungambakkam & Khader Nawaz Khan Rd": (13.0569, 80.2425),
+    "OMR IT Corridor & Guindy": (12.9157, 80.2289),
+    # Jaipur
+    "C-Scheme & MI Road": (26.9090, 75.8000),
+    "Malviya Nagar & World Trade Park": (26.8533, 75.8052),
+    # Chandigarh
+    "Sector 17 & Sector 26": (30.7398, 76.7827),
+    "IT Park & Mohali Phase 8": (30.7250, 76.8480),
+    # Goa
+    "Panaji & Miramar Promenade": (15.4909, 73.8278),
+    "Candolim, Calangute & Anjuna Coastal Hub": (15.5186, 73.7634),
+    # International Hubs
+    "Downtown Dubai & Business Bay": (25.1867, 55.2655),
+    "DIFC (Dubai Financial Centre)": (25.2104, 55.2818),
+    "Singapore Marina Bay & Raffles Place": (1.2847, 103.8610),
+    "London Mayfair & Soho": (51.5113, -0.1444),
+}
+
+CITY_DEFAULT_COORDINATES: Dict[str, Tuple[float, float]] = {
+    "Mumbai": (18.9284, 72.8282),
+    "Bengaluru": (12.9716, 77.5946),
+    "Delhi NCR": (28.6139, 77.2090),
+    "Hyderabad": (17.3850, 78.4867),
+    "Pune": (18.5204, 73.8567),
+    "Ahmedabad": (23.0225, 72.5714),
+    "Kolkata": (22.5726, 88.3639),
+    "Chennai": (13.0827, 80.2707),
+    "Jaipur": (26.9124, 75.7873),
+    "Chandigarh": (30.7333, 76.7794),
+    "Goa": (15.2993, 74.1240),
+    "International Hubs": (25.2048, 55.2708),
+}
+
+TECH_STACK_PRESETS: Dict[str, List[str]] = {
+    "Graphic Designing & Brand Identity": ["Adobe Creative Cloud", "Figma Pro", "Klaviyo VIP", "Webflow CMS", "Meta Ads Manager"],
+    "Website Development & Web Apps": ["Next.js 15", "TailwindCSS", "Node.js", "PostgreSQL", "Vercel Edge", "Stripe API"],
+    "Search Engine Optimization (SEO) & Google 3-Pack": ["Google Search Console", "Ahrefs Enterprise", "Schema.org Microdata", "Cloudflare CDN", "Google Tag Manager"],
+    "D2C Brands & Consumer Goods": ["Shopify Plus", "Klaviyo", "Meta Pixel CAPI", "Google Tag Manager", "Shiprocket"],
+    "Real Estate & Luxury Living": ["Custom Laravel CRM", "Google Ads 360", "Matterport 3D", "LeadSquared", "WhatsApp Business Cloud"],
+    "Fine Dining, Cafes & Luxury Hospitality": ["Zomato Pro Partner", "Swiggy Enterprise", "Dineout Reserve", "Instagram Shop", "Meta CAPI"],
+    "Aesthetic Clinics, Dermatology & Healthcare": ["Practo Prime", "Google Ads Medical", "WhatsApp Business API", "Zoho Healthcare CRM"],
+    "Tech Startups, SaaS & AI Ventures": ["Segment", "HubSpot Enterprise", "Mixpanel", "Stripe Billing", "Google Analytics 4"],
+    "Luxury Retail & Designer Fashion": ["Magento 2 Enterprise", "Farfetch Partner", "Klaviyo VIP", "Meta Advantage+", "Pinterest Ads"],
+}
 
 
 # ==============================================================================
@@ -557,10 +652,21 @@ class LeadGeneratorService:
     def get_presets(self) -> Dict[str, Any]:
         regions = []
         for city, data in LOCATION_DATABASE.items():
-            areas_list = list(data["areas"].keys())
+            city_lat, city_lng = CITY_DEFAULT_COORDINATES.get(city, (18.9284, 72.8282))
+            areas_list = []
+            for area_name in data["areas"].keys():
+                lat, lng = AREA_COORDINATES.get(area_name, (city_lat, city_lng))
+                areas_list.append({
+                    "name": area_name,
+                    "lat": lat,
+                    "lng": lng,
+                })
             regions.append({
                 "city": city,
-                "areas": areas_list,
+                "lat": city_lat,
+                "lng": city_lng,
+                "areas": [a["name"] for a in areas_list],
+                "area_details": areas_list,
             })
         return {
             "regions": regions,
@@ -633,6 +739,19 @@ class LeadGeneratorService:
         phone_stds = city_info.get("phone_stds", ["98", "99", "97", "96", "91"])
         currency_multiplier = city_info.get("currency_multiplier", 1.0)
 
+        # Resolve center GPS coordinates
+        if req.latitude is not None and req.longitude is not None:
+            center_lat = req.latitude
+            center_lng = req.longitude
+        elif resolved_area in AREA_COORDINATES:
+            center_lat, center_lng = AREA_COORDINATES[resolved_area]
+        elif resolved_city in CITY_DEFAULT_COORDINATES:
+            center_lat, center_lng = CITY_DEFAULT_COORDINATES[resolved_city]
+        else:
+            center_lat, center_lng = (18.9284, 72.8282)
+
+        radius_km = max(0.5, min(req.radius_km or 5.0, 50.0))
+
         # Build unique brand catalog for this request
         raw_brands = list(meta["brand_catalogs"])
         random.shuffle(raw_brands)
@@ -668,6 +787,22 @@ class LeadGeneratorService:
             else:
                 phone_num = f"{phone_prefix} {random.randint(20, 99)} {random.randint(1000, 9999)} {random.randint(1000, 9999)}"
 
+            # Calculate pinpoint GPS coordinates within requested radius_km
+            r = radius_km * math.sqrt(random.uniform(0.04, 1.0))
+            theta = random.uniform(0, 2 * math.pi)
+            lat_offset = (r * math.cos(theta)) / 111.0
+            lng_offset = (r * math.sin(theta)) / (111.0 * max(0.2, math.cos(math.radians(center_lat))))
+            lead_lat = round(center_lat + lat_offset, 6)
+            lead_lng = round(center_lng + lng_offset, 6)
+            dist_km = haversine_distance(center_lat, center_lng, lead_lat, lead_lng)
+
+            if dist_km < 0.9:
+                walk_mins = max(2, int(dist_km * 12))
+                distance_label = f"{int(dist_km * 1000)}m away • 🚶 {walk_mins} min walk"
+            else:
+                drive_mins = max(3, int(dist_km * 3))
+                distance_label = f"{dist_km} km away • 🚗 {drive_mins} min drive"
+
             # Deal value reflective of location economy & requested minimum
             low, high = meta["deal_range"]
             adjusted_low = int(low * currency_multiplier)
@@ -679,6 +814,78 @@ class LeadGeneratorService:
 
             deal_val = round(random.randint(adjusted_low, adjusted_high) / 5000) * 5000
             intent_score = random.randint(86, 99)
+
+            # Buyer Persona and Temperature
+            if intent_score >= 93:
+                lead_temp = "HOT_BUYER"
+            elif intent_score >= 89:
+                lead_temp = "WARM_PROSPECT"
+            else:
+                lead_temp = "OPPORTUNITY"
+
+            if req.lead_temperature_filter and req.lead_temperature_filter != "ALL":
+                lead_temp = req.lead_temperature_filter
+
+            google_rating = round(random.uniform(4.4, 4.9), 1)
+            review_count = random.randint(45, 380)
+            pack_options = [
+                "Rank #1 in Google Local 3-Pack",
+                "Rank #2 in Google Local 3-Pack",
+                "Rank #3 in Google Local 3-Pack",
+                "Unranked (Pos #8) - Losing 65% Local Traffic",
+                "Unranked (Pos #14) - Missing from Map Pack",
+            ]
+            google_3pack_status = random.choice(pack_options)
+
+            rev_bands = [
+                "₹1.5 Cr - ₹3.5 Cr ARR",
+                "₹3.5 Cr - ₹8.0 Cr ARR",
+                "₹8.0 Cr - ₹20.0 Cr ARR",
+                "₹20 Cr+ High Growth",
+            ]
+            emp_bands = [
+                "10-25 Employees",
+                "25-60 Employees",
+                "60-150 Employees",
+            ]
+            annual_revenue_band = random.choice(rev_bands)
+            employee_count_band = random.choice(emp_bands)
+
+            website_url = f"https://www.{clean_brand_slug}.{email_domain}"
+            speed_statuses = [
+                "3.9s Mobile LCP (High Bounce Risk)",
+                "4.4s LCP (Failing Core Web Vitals)",
+                "1.4s Optimal Next.js Storefront",
+                "No Mobile PWA / AMP Support",
+            ]
+            website_speed_status = random.choice(speed_statuses)
+            tech_stack = TECH_STACK_PRESETS.get(niche_key, ["Next.js", "TailwindCSS", "Meta Pixel", "Google Tag Manager"])
+
+            buyer_personas = {
+                "Graphic Designing & Brand Identity": "Aesthetic-first Founder seeking premium brand repositioning to justify 40% higher retail price points",
+                "Website Development & Web Apps": "E-Commerce Founder losing 45% mobile checkout traffic due to high page load times and fragmented UI",
+                "Search Engine Optimization (SEO) & Google 3-Pack": "Commercial Operator frustrated by losing top 3 Google search rankings to regional competitors",
+                "D2C Brands & Consumer Goods": "Direct-to-Consumer Founder seeking ROAS turnaround (>3.5x) and retention marketing automation",
+                "Real Estate & Luxury Living": "Developer Managing Partner seeking qualified HNI buyer leads with zero wasted portal ad spend",
+                "Fine Dining, Cafes & Luxury Hospitality": "Restaurateur aiming for 100% direct weekend table reservations and food creator viral reels",
+                "Aesthetic Clinics, Dermatology & Healthcare": "Clinic Director requiring steady high-ticket cosmetic procedure consultations",
+                "Tech Startups, SaaS & AI Ventures": "B2B SaaS Founder looking for product-led growth inbound funnels and enterprise demo pipeline",
+                "Luxury Retail & Designer Fashion": "Luxury House Director demanding museum-grade editorial creative and VIP client retention",
+            }
+            buyer_persona = buyer_personas.get(niche_key, "Growth-driven Decision Maker seeking measurable ROI and executive agency partnership")
+
+            buying_triggers = [
+                f"Active commercial expansion within {resolved_area.split('(')[0].strip()}",
+                f"Core service keyword search interest up 140% in {resolved_city}",
+                f"Experiencing ad creative fatigue and rising customer acquisition costs",
+            ]
+
+            suite_no = random.randint(101, 808)
+            floor_name = random.choice(['1st', '2nd', '3rd', '4th', '5th', '7th', '9th'])
+            pinpoint_address = f"Suite {suite_no}, {floor_name} Floor, {landmark_address}"
+            nearby_landmark = f"Opposite {random.choice(['Starbucks Reserve', 'Metro Station Gate 2', 'Central Promenade', 'Trident Plaza', 'Phoenix Atrium'])}, {landmark_address.split(',')[0]}"
+
+            linkedin_url = f"https://www.linkedin.com/search/results/all/?keywords={urllib.parse.quote(founder_name + ' ' + company_name)}"
 
             # Location-aware audit observations
             selected_pain_points = list(meta["pain_points"])
@@ -710,8 +917,15 @@ class LeadGeneratorService:
 
             wa_text = (
                 f"Hey {founder_name.split()[0]}! 👋 Reaching out from The Desi Muchads. Came across {company_name} "
-                f"around {area_label}. We diagnosed a high-impact growth opportunity: {audit_findings[0].lower()[:60]}... "
+                f"around {area_label} (near {nearby_landmark.split(',')[0]}). We diagnosed a high-impact growth opportunity: {audit_findings[0].lower()[:60]}... "
                 f"Mind if I send over our 2-min video teardown showing how we fix this?"
+            )
+
+            cold_phone_call_script = (
+                f"1. Gatekeeper Bypass: 'Hi, I'm calling from The Desi Muchads research desk regarding the technical audit we performed for {founder_name} at your {landmark_address.split(',')[0]} location. May I speak with {founder_name.split()[0]}?'\n"
+                f"2. Founder Hook: 'Hi {founder_name.split()[0]}, we analyzed {company_name}'s {niche_key} footprint within {area_label} and noticed {audit_findings[0].lower()[:50]}... is leaking ~₹1-2L in high-intent monthly pipeline.'\n"
+                f"3. Local Proof: 'We recently fixed this exact issue for another client in {resolved_city} and {meta['case_study']}.'\n"
+                f"4. Frictionless CTA: 'I have a 7-slide teardown deck ready. Can I email this over, and can we do a 10-minute preview call this Thursday at 3 PM?'"
             )
 
             # WhatsApp click-to-chat URL
@@ -731,16 +945,36 @@ class LeadGeneratorService:
                     area=resolved_area,
                     locality=landmark_address,
                     public_landmark=landmark_address,
+                    nearby_landmark=nearby_landmark,
                     google_maps_url=google_maps_url,
+                    google_maps_place_id=f"ChIJ{uuid.uuid4().hex[:12]}_muchad_place",
+                    google_rating=google_rating,
+                    review_count=review_count,
+                    google_3pack_status=google_3pack_status,
                     niche=req.niche,
                     deal_value=float(deal_val),
                     intent_score=intent_score,
+                    lead_temperature=lead_temp,
                     audit_findings=audit_findings,
+                    buying_triggers=buying_triggers,
+                    buyer_persona=buyer_persona,
+                    annual_revenue_band=annual_revenue_band,
+                    employee_count_band=employee_count_band,
+                    website_url=website_url,
+                    website_speed_status=website_speed_status,
+                    tech_stack=tech_stack,
                     recommended_service=meta["service"],
+                    latitude=lead_lat,
+                    longitude=lead_lng,
+                    distance_km=dist_km,
+                    distance_label=distance_label,
+                    pinpoint_address=pinpoint_address,
+                    linkedin_url=linkedin_url,
                     cold_email_subject=email_subject,
                     cold_email_body=email_body,
                     cold_whatsapp_text=wa_text,
                     whatsapp_click_url=whatsapp_click_url,
+                    cold_phone_call_script=cold_phone_call_script,
                 )
             )
 
