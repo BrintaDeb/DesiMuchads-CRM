@@ -5,13 +5,16 @@ import { TopHeader } from "@/components/layout/TopHeader";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { InstallAppBanner } from "@/components/layout/InstallAppBanner";
+import { LeadGeneratorModal } from "@/components/crm/LeadGeneratorModal";
 import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
 import { realtime } from "@/lib/websocket";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { initializeAuth, token } = useAuthStore();
+  const { leadRadarOpen, setLeadRadarOpen } = useUIStore();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -73,6 +76,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <MobileNav />
       <InstallAppBanner />
+
+      <LeadGeneratorModal
+        isOpen={leadRadarOpen}
+        onClose={() => setLeadRadarOpen(false)}
+        onLeadsInjected={() => {
+          queryClient.invalidateQueries({ queryKey: ["deals"] });
+        }}
+      />
     </div>
   );
 }

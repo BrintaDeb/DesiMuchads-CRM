@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import {
   Sparkles,
   MapPin,
@@ -39,6 +40,17 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+// Dynamically import Leaflet Map to avoid SSR errors
+const PinpointLeafletMap = dynamic(() => import("./PinpointLeafletMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[280px] sm:h-[360px] md:h-[400px] rounded-xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-400 font-mono text-xs gap-2">
+      <RefreshCw className="w-5 h-5 animate-spin text-[#714B67]" />
+      <span>Loading Geospatial Pinpoint Radar...</span>
+    </div>
+  ),
+});
 
 export interface DiscoveredLead {
   temp_id: string;
@@ -238,6 +250,112 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
   const [selectedChannel, setSelectedChannel] = useState<"ALL" | "EMAIL" | "WHATSAPP">("ALL");
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
 
+  // Mobile View & Geolocation State
+  const [mobileTab, setMobileTab] = useState<"map" | "leads">("map");
+  const [isLocating, setIsLocating] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  // 1. Phone GPS Locator handler
+  const handleLocateMe = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocation is not supported on this device/browser.");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCenterLat(lat);
+        setCenterLng(lng);
+        setIsCustomMode(true);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`
+          );
+          const data = await res.json();
+          if (data?.display_name) {
+            const parts = data.display_name.split(",");
+            const resolvedName = parts.slice(0, 3).join(",").trim();
+            setPinpointLandmark(resolvedName);
+            setCustomArea(parts[0]?.trim() || "");
+            const city =
+              data.address?.city ||
+              data.address?.town ||
+              data.address?.suburb ||
+              data.address?.state ||
+              "Current Location";
+            setCustomCity(city);
+            toast.success(`📍 Phone GPS: ${resolvedName}`);
+          } else {
+            toast.success(`📍 GPS: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+          }
+        } catch {
+          toast.success(`📍 GPS: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        toast.error(`GPS Error: ${err.message}. Please enable location services.`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  };
+
+  // 2. Map Pinpoint Change handler (drag or tap on map)
+  const handlePinpointChange = (lat: number, lng: number, resolvedName?: string) => {
+    setCenterLat(lat);
+    setCenterLng(lng);
+    if (resolvedName) {
+      setPinpointLandmark(resolvedName);
+      if (isCustomMode) {
+        setCustomArea(resolvedName.split(",")[0]?.trim() || resolvedName);
+      }
+    }
+  };
+
+  // 3. Search & Geocode any place worldwide
+  const handleGeocodeSearch = async (queryToSearch?: string) => {
+    const q = (
+      queryToSearch ||
+      pinpointLandmark ||
+      (isCustomMode ? `${customArea} ${customCity}` : `${selectedArea} ${selectedCity}`)
+    ).trim();
+    if (!q) {
+      toast.error("Please enter a landmark, street, or city to search.");
+      return;
+    }
+    setIsGeocoding(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const item = data[0];
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        setCenterLat(lat);
+        setCenterLng(lng);
+        setPinpointLandmark(item.display_name.split(",").slice(0, 3).join(",").trim());
+        if (isCustomMode) {
+          const parts = item.display_name.split(",");
+          setCustomArea(parts[0]?.trim() || q);
+          setCustomCity(parts.slice(-3, -2)[0]?.trim() || parts[1]?.trim() || "Commercial District");
+        }
+        toast.success(`📍 Located on map: ${item.display_name.split(",").slice(0, 2).join(",")}`);
+      } else {
+        toast.error(`Could not locate "${q}". Try typing a nearby street or city.`);
+      }
+    } catch {
+      toast.error("Geocoding service unavailable. You can tap the map directly.");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
   // Fetch live presets on mount
   useEffect(() => {
     const fetchPresets = async () => {
@@ -319,6 +437,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
       setSelectedIds(new Set(leads.map((l) => l.temp_id)));
       if (leads.length > 0) {
         setExpandedOutreachId(leads[0].temp_id);
+        setMobileTab("leads");
       }
       toast.success(
         `Pinpointed ${leads.length} verified buyers within ${radiusKm}km radius of ${finalArea}, ${finalCity}!`
@@ -374,6 +493,10 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
         toast.success(`Dispatched ${selectedChannel} outreach & injected ${leadsToInject.length} deals!`);
       } else {
         toast.success(`Successfully injected ${leadsToInject.length} leads into CRM Pipeline!`);
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("muchad:leads_injected"));
       }
 
       onLeadsInjected();
@@ -462,8 +585,8 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
     .reduce((sum, l) => sum + l.deal_value, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[94vh] flex flex-col overflow-hidden text-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white border-0 sm:border sm:border-slate-200 rounded-none sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[100dvh] sm:h-auto sm:max-h-[94vh] flex flex-col overflow-hidden text-slate-800">
         
         {/* Modal Top Header */}
         <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0">
@@ -640,20 +763,49 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
               </div>
             </div>
 
-            {/* Landmark Refinement & Search Bar */}
+            {/* Landmark Refinement & Universal Search Bar */}
             <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-2.5">
-              <div className="relative flex-1 w-full">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleGeocodeSearch();
+                }}
+                className="relative flex-1 w-full flex items-center"
+              >
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
-                  placeholder="Pinpoint specific landmark or street (e.g. Maker Chamber V, Phoenix Palladium, Indiranagar 100ft Rd)..."
+                  placeholder="Search ANY landmark, street, or city worldwide (e.g. Connaught Place, SoHo, Indiranagar, Marine Drive)..."
                   value={pinpointLandmark}
                   onChange={(e) => setPinpointLandmark(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#714B67]"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-20 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#714B67]"
                 />
-              </div>
+                <button
+                  type="submit"
+                  disabled={isGeocoding}
+                  className="absolute right-1.5 top-1 px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-semibold rounded-md transition disabled:opacity-50"
+                >
+                  {isGeocoding ? "Locating..." : "Locate"}
+                </button>
+              </form>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                {/* 1-Tap Phone GPS Button */}
+                <button
+                  type="button"
+                  onClick={handleLocateMe}
+                  disabled={isLocating}
+                  className="px-2.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50 shrink-0"
+                  title="Use Phone GPS to pinpoint current location"
+                >
+                  {isLocating ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  ) : (
+                    <Navigation className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
+                  )}
+                  <span>My Phone GPS</span>
+                </button>
+
                 <div className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] font-mono text-slate-600 shrink-0">
                   <MapPin className="w-3 h-3 text-red-500" />
                   <span>{centerLat.toFixed(3)}° N, {centerLng.toFixed(3)}° E</span>
@@ -678,6 +830,50 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Mobile View Switcher Tabs (Only on small screens) */}
+          <div className="flex sm:hidden items-center justify-between p-1 bg-slate-200/80 rounded-xl gap-1 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setMobileTab("map")}
+              className={cn(
+                "flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition",
+                mobileTab === "map" ? "bg-white text-[#714B67] shadow-xs" : "text-slate-600"
+              )}
+            >
+              <Compass className="w-3.5 h-3.5 text-[#714B67]" />
+              <span>Interactive Map</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("leads")}
+              className={cn(
+                "flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition",
+                mobileTab === "leads" ? "bg-white text-[#714B67] shadow-xs" : "text-slate-600"
+              )}
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#714B67]" />
+              <span>Buyer Leads ({filteredLeads.length})</span>
+            </button>
+          </div>
+
+          {/* Section 2: Interactive Pinpoint Map */}
+          <div className={cn("space-y-2", mobileTab === "leads" ? "hidden sm:block" : "block")}>
+            <PinpointLeafletMap
+              centerLat={centerLat}
+              centerLng={centerLng}
+              radiusKm={radiusKm}
+              pinpointLandmark={pinpointLandmark}
+              onPinpointChange={handlePinpointChange}
+              leads={filteredLeads}
+              onSelectLead={(lead) => {
+                setExpandedOutreachId(lead.temp_id);
+                setMobileTab("leads");
+              }}
+              isLocating={isLocating}
+              onLocateMe={handleLocateMe}
+            />
           </div>
 
           {/* Section 2: Visual Geospatial Radar & Temperature Filter Bar */}
@@ -775,7 +971,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
 
           {/* Section 3: Discovered Leads Dossier Cards */}
           {filteredLeads.length > 0 && (
-            <div className="space-y-3">
+            <div className={cn("space-y-3", mobileTab === "map" ? "hidden sm:block" : "block")}>
               <div className="flex items-center justify-between px-1 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <button
@@ -1220,7 +1416,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="px-5 py-3.5 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="px-4 sm:px-5 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600">Dispatched Via:</span>
             <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px]">

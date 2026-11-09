@@ -25,14 +25,16 @@ import {
   Zap,
   Copy,
   ExternalLink,
+  Compass,
+  Radio,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { DealStage } from "@/types";
 import { OdooControlPanel, ViewMode } from "@/components/layout/OdooControlPanel";
-import { LeadGeneratorModal } from "@/components/crm/LeadGeneratorModal";
 import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
 
 interface DealCard {
   id: string;
@@ -125,7 +127,7 @@ export default function CRMPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewDealModalOpen, setIsNewDealModalOpen] = useState(false);
-  const [isLeadGeneratorOpen, setIsLeadGeneratorOpen] = useState(false);
+  const { leadRadarOpen, setLeadRadarOpen } = useUIStore();
 
   // Form for New Deal
   const [newCompany, setNewCompany] = useState("");
@@ -240,6 +242,9 @@ export default function CRMPage() {
 
   useEffect(() => {
     refreshDeals();
+    const handleInjected = () => refreshDeals();
+    window.addEventListener("muchad:leads_injected", handleInjected);
+    return () => window.removeEventListener("muchad:leads_injected", handleInjected);
   }, []);
 
   const toggleBlueprint = (name: string) => {
@@ -474,12 +479,12 @@ export default function CRMPage() {
           <div className="flex items-center gap-2">
             {canAccessLeadEngine && (
               <button
-                onClick={() => setIsLeadGeneratorOpen(true)}
+                onClick={() => setLeadRadarOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold shadow-xs transition hover:scale-[1.02] active:scale-[0.98]"
                 title="Autonomous Area Lead Discovery & Cold Outreach Engine"
               >
                 <Sparkles size={13} className="text-amber-300 animate-pulse" />
-                <span>AI Lead Engine</span>
+                <span>AI Lead Radar</span>
               </button>
             )}
             <span className="text-[11px] font-mono px-2 py-1 rounded bg-purple-50 text-[#714B67] border border-purple-200 hidden md:inline-block">
@@ -1341,12 +1346,19 @@ export default function CRMPage() {
         </div>
       )}
 
-      {/* Autonomous Area Lead Generator & Cold Outreach Engine Modal */}
-      <LeadGeneratorModal
-        isOpen={isLeadGeneratorOpen}
-        onClose={() => setIsLeadGeneratorOpen(false)}
-        onLeadsInjected={refreshDeals}
-      />
+      {/* Mobile Floating Action Button: 1-Tap Lead Radar Access on Phone */}
+      {canAccessLeadEngine && (
+        <button
+          type="button"
+          onClick={() => setLeadRadarOpen(true)}
+          className="md:hidden fixed bottom-20 right-4 z-30 px-3.5 py-2.5 bg-[#714B67] hover:bg-[#5E3E55] text-white rounded-full shadow-xl border-2 border-white flex items-center gap-2 transition active:scale-95"
+          title="Open Lead Radar & Pinpoint Map"
+        >
+          <Compass className="w-4 h-4 text-amber-300 animate-[spin_8s_linear_infinite]" />
+          <span className="text-xs font-bold tracking-tight">Lead Radar</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+        </button>
+      )}
     </div>
   );
 }

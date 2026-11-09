@@ -732,6 +732,10 @@ class LeadGeneratorService:
         results: List[DiscoveredLeadItem] = []
 
         landmarks, resolved_city, resolved_area = self._resolve_landmarks(req.city, req.area)
+        if req.pinpoint_landmark and req.pinpoint_landmark.strip():
+            clean_pin = req.pinpoint_landmark.strip()
+            landmarks.insert(0, f"{clean_pin}, {resolved_area}, {resolved_city}")
+            landmarks.insert(1, f"Near {clean_pin}, {resolved_area}")
 
         # Detect phone configuration & currency multiplier
         city_info = LOCATION_DATABASE.get(resolved_city, {})
@@ -883,7 +887,10 @@ class LeadGeneratorService:
             suite_no = random.randint(101, 808)
             floor_name = random.choice(['1st', '2nd', '3rd', '4th', '5th', '7th', '9th'])
             pinpoint_address = f"Suite {suite_no}, {floor_name} Floor, {landmark_address}"
-            nearby_landmark = f"Opposite {random.choice(['Starbucks Reserve', 'Metro Station Gate 2', 'Central Promenade', 'Trident Plaza', 'Phoenix Atrium'])}, {landmark_address.split(',')[0]}"
+            if req.pinpoint_landmark and req.pinpoint_landmark.strip():
+                nearby_landmark = f"Near {req.pinpoint_landmark.strip()}, {landmark_address.split(',')[0]}"
+            else:
+                nearby_landmark = f"Opposite {random.choice(['Starbucks Reserve', 'Metro Station Gate 2', 'Central Promenade', 'Trident Plaza', 'Phoenix Atrium'])}, {landmark_address.split(',')[0]}"
 
             linkedin_url = f"https://www.linkedin.com/search/results/all/?keywords={urllib.parse.quote(founder_name + ' ' + company_name)}"
 

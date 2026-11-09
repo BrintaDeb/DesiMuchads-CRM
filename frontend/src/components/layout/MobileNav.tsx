@@ -5,50 +5,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Zap,
-  KanbanSquare,
   Users,
+  KanbanSquare,
   Clock,
   Grid,
+  Radio,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAttendanceStore } from "@/stores/attendanceStore";
+import { useUIStore } from "@/stores/uiStore";
 import { AppSwitcherModal } from "./AppSwitcherModal";
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { status, clockIn, clockOut } = useAttendanceStore();
+  const { status } = useAttendanceStore();
+  const { leadRadarOpen, setLeadRadarOpen } = useUIStore();
   const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
 
   const isClockedIn = status === "ACTIVE" || status === "ON_BREAK";
-
-  const navItems = [
-    {
-      label: "Overview",
-      href: "/",
-      icon: LayoutDashboard,
-      isActive: pathname === "/",
-    },
-    {
-      label: "Automations",
-      href: "/automations",
-      icon: Zap,
-      isActive: pathname.startsWith("/automations"),
-      highlight: true,
-    },
-    {
-      label: "Tasks",
-      href: "/tasks",
-      icon: KanbanSquare,
-      isActive: pathname.startsWith("/tasks"),
-    },
-    {
-      label: "Team",
-      href: "/team",
-      icon: Users,
-      isActive: pathname.startsWith("/team"),
-    },
-  ];
 
   return (
     <>
@@ -58,50 +33,79 @@ export function MobileNav() {
         aria-label="Mobile Navigation"
       >
         <div className="flex items-center justify-around h-14">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[56px] min-h-[44px]",
-                  item.isActive ? "text-[#714B67]" : "text-zinc-500 hover:text-zinc-900"
-                )}
-              >
-                <div
-                  className={cn(
-                    "p-1 rounded-full transition-all",
-                    item.isActive ? "bg-purple-50 text-[#714B67]" : ""
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "w-5 h-5",
-                      item.highlight && item.isActive && "fill-[#714B67]"
-                    )}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] font-medium leading-none mt-0.5",
-                    item.isActive ? "font-bold text-[#714B67]" : "text-zinc-500"
-                  )}
-                >
-                  {item.label}
-                </span>
-                {item.isActive && (
-                  <span className="absolute top-0 w-8 h-0.5 bg-[#714B67] rounded-full" />
-                )}
-              </Link>
-            );
-          })}
+          {/* 1. Overview */}
+          <Link
+            href="/"
+            className={cn(
+              "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[50px] min-h-[44px]",
+              pathname === "/" ? "text-[#714B67]" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            <div className={cn("p-1 rounded-full transition-all", pathname === "/" ? "bg-purple-50 text-[#714B67]" : "")}>
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <span className={cn("text-[10px] font-medium leading-none mt-0.5", pathname === "/" ? "font-bold text-[#714B67]" : "text-zinc-500")}>
+              Overview
+            </span>
+            {pathname === "/" && <span className="absolute top-0 w-8 h-0.5 bg-[#714B67] rounded-full" />}
+          </Link>
 
-          {/* Quick Attendance Terminal Button */}
+          {/* 2. CRM & Pipeline */}
+          <Link
+            href="/crm"
+            className={cn(
+              "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[50px] min-h-[44px]",
+              pathname.startsWith("/crm") ? "text-[#714B67]" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            <div className={cn("p-1 rounded-full transition-all", pathname.startsWith("/crm") ? "bg-purple-50 text-[#714B67]" : "")}>
+              <Users className="w-5 h-5" />
+            </div>
+            <span className={cn("text-[10px] font-medium leading-none mt-0.5", pathname.startsWith("/crm") ? "font-bold text-[#714B67]" : "text-zinc-500")}>
+              CRM
+            </span>
+            {pathname.startsWith("/crm") && <span className="absolute top-0 w-8 h-0.5 bg-[#714B67] rounded-full" />}
+          </Link>
+
+          {/* 3. Center Highlight: Mobile Lead Radar Trigger */}
+          <button
+            type="button"
+            onClick={() => setLeadRadarOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 h-full py-0.5 text-center relative -top-1.5 min-w-[56px] min-h-[48px] group"
+            title="Search Leads & Pinpoint on Map"
+          >
+            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#714B67] to-[#8c5d80] text-white flex items-center justify-center shadow-md border-2 border-white group-active:scale-95 transition-transform relative">
+              <Compass className="w-5 h-5 text-amber-300 animate-[spin_10s_linear_infinite]" />
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full animate-ping" />
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+            </div>
+            <span className="text-[10px] font-bold text-[#714B67] leading-none mt-0.5 tracking-tight">
+              Radar
+            </span>
+          </button>
+
+          {/* 4. Tasks & Deliverables */}
+          <Link
+            href="/tasks"
+            className={cn(
+              "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[50px] min-h-[44px]",
+              pathname.startsWith("/tasks") ? "text-[#714B67]" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            <div className={cn("p-1 rounded-full transition-all", pathname.startsWith("/tasks") ? "bg-purple-50 text-[#714B67]" : "")}>
+              <KanbanSquare className="w-5 h-5" />
+            </div>
+            <span className={cn("text-[10px] font-medium leading-none mt-0.5", pathname.startsWith("/tasks") ? "font-bold text-[#714B67]" : "text-zinc-500")}>
+              Tasks
+            </span>
+            {pathname.startsWith("/tasks") && <span className="absolute top-0 w-8 h-0.5 bg-[#714B67] rounded-full" />}
+          </Link>
+
+          {/* 5. Attendance / Shift */}
           <Link
             href="/attendance"
             className={cn(
-              "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[56px] min-h-[44px]",
+              "flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors relative min-w-[50px] min-h-[44px]",
               pathname.startsWith("/attendance") ? "text-[#714B67]" : "text-zinc-500 hover:text-zinc-900"
             )}
             title="Attendance Status"
@@ -121,15 +125,15 @@ export function MobileNav() {
                 pathname.startsWith("/attendance") ? "font-bold text-[#714B67]" : "text-zinc-500"
               )}
             >
-              {isClockedIn ? "Clocked" : "HR/Shift"}
+              {isClockedIn ? "Clocked" : "Shift"}
             </span>
           </Link>
 
-          {/* Odoo App Launcher Trigger */}
+          {/* 6. Odoo App Launcher Trigger */}
           <button
             type="button"
             onClick={() => setAppSwitcherOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center text-zinc-500 hover:text-zinc-900 min-w-[56px] min-h-[44px]"
+            className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center text-zinc-500 hover:text-zinc-900 min-w-[50px] min-h-[44px]"
             title="All Apps"
           >
             <div className="p-1 rounded-full bg-zinc-100 text-zinc-700">
