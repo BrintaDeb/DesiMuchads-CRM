@@ -54,6 +54,7 @@ from app.api.v1.assets import router as assets_router
 from app.api.v1.users import router as users_router
 from app.api.v1.automations import router as automations_router
 from app.api.v1.lead_engine import router as lead_engine_router
+from app.api.v1.bulk_messaging import router as bulk_messaging_router
 from app.api.v1.websocket import router as ws_router
 from app.services.attendance_service import attendance_service
 from app.services.automation_bus import automation_bus
@@ -80,12 +81,16 @@ async def seed_initial_agency_data():
             admin_user.permissions = ALL_PERMISSION_IDS
             if not admin_user.employee_id:
                 admin_user.employee_id = "DM-ADMIN-001"
+            if not admin_user.phone:
+                admin_user.phone = "+91 98765 00001"
 
-            # Ensure other existing users have permissions and employee IDs
+            # Ensure other existing users have permissions, employee IDs and phone numbers
             all_users_res = await session.execute(select(User))
-            for u in all_users_res.scalars().all():
+            for idx, u in enumerate(all_users_res.scalars().all()):
                 if not u.employee_id:
                     u.employee_id = f"DM-EMP-{str(u.id)[:4].upper()}"
+                if not u.phone:
+                    u.phone = f"+91 98765 0000{idx + 1}"
                 if not u.permissions:
                     u.permissions = get_default_permissions_for_role(
                         role=u.role,
@@ -141,8 +146,10 @@ async def seed_initial_agency_data():
             logger.info("Seeding initial agency users and workflow templates...")
             admin_user = User(
                 email="admin@desimuchads.com",
+                phone="+91 98765 00001",
                 password_hash=hash_password("admin123456"),
                 full_name="Muchad Founder (Super Admin)",
+                employee_id="DM-ADMIN-001",
                 role=UserRole.SUPER_ADMIN,
                 department="Executive Leadership",
                 hourly_cost=100.0,
@@ -155,8 +162,10 @@ async def seed_initial_agency_data():
             )
             manager_user = User(
                 email="manager@desimuchads.com",
+                phone="+91 98765 00002",
                 password_hash=hash_password("manager123456"),
                 full_name="Aarav Sharma (Account Manager)",
+                employee_id="DM-EMP-0002",
                 role=UserRole.ACCOUNT_MANAGER,
                 department="Client Success",
                 hourly_cost=50.0,
@@ -169,8 +178,10 @@ async def seed_initial_agency_data():
             )
             specialist_user = User(
                 email="specialist@desimuchads.com",
+                phone="+91 98765 00003",
                 password_hash=hash_password("specialist123456"),
                 full_name="Priya Patel (Lead Designer & Copy)",
+                employee_id="DM-EMP-0003",
                 role=UserRole.SPECIALIST,
                 department="Creative & Media",
                 hourly_cost=35.0,
@@ -762,6 +773,9 @@ async def lifespan(app: FastAPI):
             if "employee_id" not in cols:
                 logger.info("Migrating schema: adding 'employee_id' column to users table...")
                 await conn.run_sync(lambda sync_conn: sync_conn.execute(text("ALTER TABLE users ADD COLUMN employee_id VARCHAR(50)")))
+            if "phone" not in cols:
+                logger.info("Migrating schema: adding 'phone' column to users table...")
+                await conn.run_sync(lambda sync_conn: sync_conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(50) DEFAULT NULL")))
         except Exception as e:
             logger.warning(f"Could not verify users schema: {e}")
 
@@ -827,6 +841,7 @@ app.include_router(automations_router, prefix="/api/v1")
 app.include_router(attendance_router, prefix="/api/v1")
 app.include_router(crm_router, prefix="/api/v1")
 app.include_router(lead_engine_router, prefix="/api/v1")
+app.include_router(bulk_messaging_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(content_router, prefix="/api/v1")

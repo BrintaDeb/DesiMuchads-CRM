@@ -43,6 +43,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     employee_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
@@ -432,5 +433,27 @@ class UserSession(Base):
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
+
+
+class BulkMessageCampaign(Base):
+    __tablename__ = "bulk_message_campaigns"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    channel: Mapped[str] = mapped_column(String(50), default="WHATSAPP", nullable=False)  # WHATSAPP, EMAIL, SMS, OMNICHANNEL
+    target_audience: Mapped[str] = mapped_column(String(100), default="ALL_LEADS", nullable=False)
+    subject: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    message_template: Mapped[str] = mapped_column(Text, nullable=False)
+    total_recipients: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="COMPLETED", nullable=False)  # DRAFT, DISPATCHING, COMPLETED
+    created_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    recipients_data: Mapped[Optional[list]] = mapped_column(JSON, default=list, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    created_by: Mapped[Optional["User"]] = relationship("User")
+
 
 

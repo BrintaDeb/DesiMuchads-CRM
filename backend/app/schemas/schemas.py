@@ -47,8 +47,15 @@ class ApiResponse(BaseModel, Generic[T]):
 # ==============================================================================
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    # Supports Email ID, Phone Number, or Employee ID in a single flexible field or dedicated fields
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    login_id: Optional[str] = None
     password: str = Field(..., min_length=6)
+
+    def get_identifier(self) -> str:
+        ident = self.login_id or self.email or self.phone or ""
+        return ident.strip()
 
 
 class TokenResponse(BaseModel):
@@ -80,6 +87,7 @@ class UserSessionOut(BaseModel):
 class UserBase(BaseModel):
     employee_id: Optional[str] = None
     email: EmailStr
+    phone: Optional[str] = None
     full_name: str
     role: UserRole = UserRole.SPECIALIST
     department: str = "Digital Marketing"
@@ -98,6 +106,8 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     employee_id: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     department: Optional[str] = None
@@ -766,4 +776,59 @@ class LeadDispatchBatchRequest(BaseModel):
     lead_ids: Optional[List[str]] = None
     leads: Optional[List[DiscoveredLeadItem]] = None
     channel: str = "ALL"  # "EMAIL", "WHATSAPP", "ALL"
+
+
+# ==============================================================================
+# BULK MESSAGING & BROADCAST CAMPAIGN SCHEMAS
+# ==============================================================================
+
+class BulkRecipientItem(BaseModel):
+    contact_name: str
+    company_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    deal_value: Optional[float] = None
+    niche: Optional[str] = None
+    rendered_message: Optional[str] = None
+    rendered_subject: Optional[str] = None
+    whatsapp_url: Optional[str] = None
+    delivery_status: str = "PENDING"  # PENDING, SENT, FAILED, SKIPPED
+    error_message: Optional[str] = None
+
+
+class BulkCampaignPreviewRequest(BaseModel):
+    target_audience: str = "ALL_LEADS"  # ALL_LEADS, HOT_BUYERS, WON_CLIENTS, GEO_LEADS, TEAM, CUSTOM
+    channel: str = "WHATSAPP"           # WHATSAPP, EMAIL, SMS, OMNICHANNEL
+    subject: Optional[str] = None
+    message_template: str = Field(..., min_length=5)
+    custom_recipients: Optional[List[Dict[str, Any]]] = None
+
+
+class BulkCampaignDispatchRequest(BaseModel):
+    title: str = "Outreach Broadcast"
+    target_audience: str = "ALL_LEADS"
+    channel: str = "WHATSAPP"
+    subject: Optional[str] = None
+    message_template: str = Field(..., min_length=5)
+    custom_recipients: Optional[List[Dict[str, Any]]] = None
+    auto_dispatch_simulation: bool = True  # Marks as dispatched with delivery telemetry
+
+
+class BulkCampaignOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    channel: str
+    target_audience: str
+    subject: Optional[str] = None
+    message_template: str
+    total_recipients: int
+    sent_count: int
+    failed_count: int
+    status: str
+    created_at: datetime
+    sent_at: Optional[datetime] = None
+    recipients_sample: Optional[List[BulkRecipientItem]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 

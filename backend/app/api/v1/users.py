@@ -1,13 +1,18 @@
 import uuid
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user, hash_password, verify_password
+from app.core.rate_limiter import (
+    check_clearance_rate_limit,
+    record_clearance_failure,
+    record_clearance_success,
+)
 from app.core.permissions import (
     ALL_MODULES,
     PERMISSION_PRESETS,
@@ -169,22 +174,32 @@ async def create_user(
 @router.post("/verify-admin-password", response_model=ApiResponse[dict])
 async def verify_admin_password(
     req: AdminPasswordVerifyRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ):
     """
     Verifies that the current user has SUPER_ADMIN role and provided valid admin password.
-    Used to gate critical administrative actions like credential provisioning.
+    Enforces brute-force rate limiting to protect administrative actions.
     """
     if current_user.role != UserRole.SUPER_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrative privileges required.",
         )
+
+    check_clearance_rate_limit(request, str(current_user.id))
+
     if not verify_password(req.password, current_user.password_hash):
+        fail_count = record_clearance_failure(request, str(current_user.id))
+        remaining = max(0, 5 - fail_count)
+        if remaining == 0:
+            check_clearance_rate_limit(request, str(current_user.id))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect admin master password.",
+            detail=f"Incorrect admin master password. {remaining} attempt(s) remaining.",
         )
+
+    record_clearance_success(request, str(current_user.id))
     return ApiResponse(data={"verified": True, "message": "Admin authorization granted."})
 
 

@@ -16,6 +16,7 @@ import {
   X,
   Search,
   Lock,
+  MessageSquare,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -125,6 +126,15 @@ const odooApps: AppItem[] = [
     color: "bg-purple-600",
     icon: Zap,
     permission: "automations:read",
+  },
+  {
+    id: "bulk-broadcast",
+    name: "Bulk Broadcast Studio",
+    description: "Multi-channel WhatsApp, Email, and SMS personalized batch campaign outreach",
+    href: "/crm",
+    color: "bg-emerald-600",
+    icon: MessageSquare,
+    permission: "crm:read",
   },
 ];
 

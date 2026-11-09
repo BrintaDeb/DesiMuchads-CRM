@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { InstallAppBanner } from "@/components/layout/InstallAppBanner";
 import { LeadGeneratorModal } from "@/components/crm/LeadGeneratorModal";
+import { BulkMessagingModal } from "@/components/crm/BulkMessagingModal";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { realtime } from "@/lib/websocket";
@@ -14,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { initializeAuth, token } = useAuthStore();
-  const { leadRadarOpen, setLeadRadarOpen } = useUIStore();
+  const { leadRadarOpen, setLeadRadarOpen, bulkMessagingOpen, setBulkMessagingOpen } = useUIStore();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -83,6 +84,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onLeadsInjected={() => {
           queryClient.invalidateQueries({ queryKey: ["deals"] });
         }}
+      />
+
+      <BulkMessagingModal
+        isOpen={bulkMessagingOpen}
+        onClose={() => setBulkMessagingOpen(false)}
       />
     </div>
   );

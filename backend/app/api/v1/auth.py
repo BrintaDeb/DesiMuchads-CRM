@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, or_
 import logging
 
 from app.core.database import get_db
@@ -19,6 +19,12 @@ from app.core.security import (
 )
 from app.models.models import User, UserSession
 from app.models.enums import UserRole
+from app.core.rate_limiter import (
+    check_login_rate_limit,
+    record_login_failure,
+    record_login_success,
+    clean_phone_number,
+)
 from app.schemas.schemas import (
     LoginRequest,
     TokenResponse,
@@ -40,14 +46,46 @@ async def login(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(User).where(User.email == login_data.email.lower(), User.deleted_at.is_(None))
+    identifier = login_data.get_identifier()
+    if not identifier:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email ID or Phone Number is required",
+        )
+
+    # 1. Enforce Rate Limiting (throws 429 if locked out)
+    check_login_rate_limit(request, identifier)
+
+    # 2. Dual-Identifier Lookup: Search by Email, Phone Number, or Employee ID
+    if "@" in identifier:
+        query = select(User).where(User.email == identifier.lower(), User.deleted_at.is_(None))
+    else:
+        clean_digits = clean_phone_number(identifier)
+        conditions = [
+            User.email == identifier.lower(),
+            User.employee_id.ilike(identifier),
+            User.phone == identifier,
+        ]
+        if clean_digits and len(clean_digits) >= 6:
+            # Match stripped phone column in database (ignoring spaces, dashes, plus signs)
+            clean_db_phone = func.replace(func.replace(func.replace(User.phone, ' ', ''), '-', ''), '+', '')
+            conditions.append(clean_db_phone.like(f"%{clean_digits}%"))
+            if len(clean_digits) > 10:
+                conditions.append(clean_db_phone.like(f"%{clean_digits[-10:]}%"))
+
+        query = select(User).where(or_(*conditions), User.deleted_at.is_(None))
+
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(login_data.password, user.password_hash):
+        fail_count = record_login_failure(request, identifier)
+        remaining = max(0, 5 - fail_count)
+        if remaining == 0:
+            check_login_rate_limit(request, identifier)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=f"Incorrect credentials. {remaining} attempt(s) remaining before security lockout." if remaining > 0 else "Account temporarily locked due to multiple failed attempts.",
         )
 
     if not user.is_active:
@@ -55,6 +93,9 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated. Contact Agency Super Admin.",
         )
+
+    # Success: clear failed rate limiting attempts
+    record_login_success(request, identifier)
 
     # Generate Dual Tokens
     access_token_payload = {

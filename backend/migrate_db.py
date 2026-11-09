@@ -16,6 +16,14 @@ for db_path in ["backend/muchadcrm.db", "backend/test_muchadcrm.db", "muchadcrm.
                 print(f"Added permissions to {db_path}")
             else:
                 print(f"permissions already in {db_path}")
+
+            if "phone" not in cols:
+                print(f"Adding phone column to {db_path}...")
+                c.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(50) DEFAULT NULL")
+                conn.commit()
+                print(f"Added phone to {db_path}")
+            else:
+                print(f"phone already in {db_path}")
         else:
             print(f"Table users does not exist in {db_path} yet")
         conn.close()

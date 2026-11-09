@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Zap,
   UserPlus,
+  MessageSquare,
 } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useAttendanceStore } from "@/stores/attendanceStore";
@@ -31,7 +32,7 @@ interface ActionItem {
 
 export function CommandPalette() {
   const router = useRouter();
-  const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, setBulkMessagingOpen, setLeadRadarOpen } = useUIStore();
   const { status, clockIn, clockOut } = useAttendanceStore();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [search, setSearch] = useState("");
@@ -127,6 +128,28 @@ export function CommandPalette() {
       action: () => router.push("/automations"),
     },
     // Interactive Terminal Actions
+    {
+      id: "act-bulk-messaging",
+      category: "Actions",
+      title: "Bulk Broadcast Studio",
+      description: "Launch WhatsApp, Email & SMS personalized bulk messaging campaigns",
+      icon: MessageSquare,
+      action: () => {
+        setBulkMessagingOpen(true);
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "act-lead-radar",
+      category: "Actions",
+      title: "AI Lead Radar & Pinpoint Map",
+      description: "Discover local business clients and generate personalized pitches",
+      icon: Sparkles,
+      action: () => {
+        setLeadRadarOpen(true);
+        setCommandPaletteOpen(false);
+      },
+    },
     {
       id: "act-clock",
       category: "Actions",
