@@ -648,25 +648,13 @@ Please log in to review your project board, track daily attendance, and access c
                 type="button"
                 onClick={() => {
                   setAdminEmailInput("admin@desimuchads.com");
-                  setAdminPasswordInput("DesiMuchads@admin98");
-                  toast.info("Pre-filled Super Admin Master Credentials");
+                  setAdminPasswordInput("");
+                  toast.info("Admin email selected. Enter your private password.");
                 }}
                 className="text-[#714B67] hover:underline font-semibold flex items-center gap-1"
               >
                 <Sparkles size={12} />
-                <span>Fill Demo Admin</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminEmailInput("admin@desimuchads.com");
-                  setAdminPasswordInput("DesiMuchads@admin98");
-                  handleVerifyAdminGate();
-                }}
-                className="px-2.5 py-1 bg-purple-50 text-[#714B67] border border-purple-200 rounded font-bold hover:bg-purple-100 transition shadow-2xs"
-              >
-                1-Click Quick Unlock
+                <span>Fill Admin Email</span>
               </button>
             </div>
           </form>

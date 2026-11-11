@@ -20,8 +20,8 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
-  const [loginId, setLoginId] = useState("admin@desimuchads.com");
-  const [password, setPassword] = useState("DesiMuchads@admin98");
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
   const [inactivityNotice, setInactivityNotice] = useState(false);
@@ -253,7 +253,11 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => fillQuickDemo("admin@desimuchads.com", "DesiMuchads@admin98")}
+              onClick={() => {
+                setLoginId("admin@desimuchads.com");
+                setPassword("");
+                toast.info("Admin email selected. Enter your private password.");
+              }}
               className="p-2 rounded-lg bg-[#F8F9FA] hover:bg-[#F1F5F9] border border-[#E2E8F0] text-left transition-colors"
             >
               <div className="font-semibold text-[#1E293B] flex items-center gap-1">
@@ -265,7 +269,11 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => fillQuickDemo("+91 98765 00001", "DesiMuchads@admin98")}
+              onClick={() => {
+                setLoginId("+91 98765 00001");
+                setPassword("");
+                toast.info("Admin phone selected. Enter your private password.");
+              }}
               className="p-2 rounded-lg bg-[#F8F9FA] hover:bg-[#F1F5F9] border border-[#E2E8F0] text-left transition-colors"
             >
               <div className="font-semibold text-[#1E293B] flex items-center gap-1">

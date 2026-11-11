@@ -250,7 +250,7 @@ export function InactivityGuard() {
                 autoFocus
                 value={unlockPassword}
                 onChange={(e) => setUnlockPassword(e.target.value)}
-                placeholder={isSuperAdmin ? "DesiMuchads@admin98" : "Profile password..."}
+                placeholder="Enter password to resume..."
                 className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-[#714B67] bg-white"
               />
             </div>
@@ -273,21 +273,6 @@ export function InactivityGuard() {
               )}
             </button>
           </form>
-
-          {/* Quick Pre-fill for Super Admin Master Key */}
-          {isSuperAdmin && (
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <button
-                type="button"
-                onClick={() => setUnlockPassword("DesiMuchads@admin98")}
-                className="text-[#714B67] hover:underline font-semibold flex items-center gap-1"
-              >
-                <Sparkles size={12} className="text-amber-500" />
-                <span>Fill Super Admin Key</span>
-              </button>
-              <span className="text-[10px] font-mono text-slate-400">DesiMuchads@admin98</span>
-            </div>
-          )}
 
           {/* Switch Profile Option */}
           <div className="pt-2 text-center">
