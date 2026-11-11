@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_roles
-from app.models.models import Project, Client, WorkflowTemplate, WorkflowTemplateStep, User
+from app.models.models import Project, Client, WorkflowTemplate, WorkflowTemplateStep, User, Task, ContentCalendarItem
 from app.models.enums import UserRole, ProjectStatus, ServiceType
 from app.schemas.schemas import (
     ApiResponse,
@@ -86,6 +86,54 @@ async def update_project(
     await db.commit()
     await db.refresh(project)
     return ApiResponse(data=ProjectOut.model_validate(project))
+
+
+@router.delete("/{id}", response_model=ApiResponse[dict])
+async def delete_project(
+    id: uuid.UUID,
+    current_user: User = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER])),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Project).where(Project.id == id, Project.deleted_at.is_(None))
+    res = await db.execute(query)
+    project = res.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Soft-delete or remove associated tasks
+    task_res = await db.execute(select(Task).where(Task.project_id == id, Task.deleted_at.is_(None)))
+    for task in task_res.scalars().all():
+        task.deleted_at = datetime.utcnow()
+
+    project.deleted_at = datetime.utcnow()
+    await db.commit()
+    return ApiResponse(data={"message": f"Project '{project.name}' deleted successfully", "id": str(id)})
+
+
+@router.post("/clean-demo", response_model=ApiResponse[dict])
+async def clean_demo_projects(
+    current_user: User = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER])),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Project).where(
+        Project.deleted_at.is_(None),
+        (Project.name.ilike("%demo%") | Project.name.ilike("%Bombay Chai%") | Project.name.ilike("%Urban Vibe%"))
+    )
+    res = await db.execute(query)
+    demo_projects = res.scalars().all()
+    cleaned_count = len(demo_projects)
+
+    for p in demo_projects:
+        task_res = await db.execute(select(Task).where(Task.project_id == p.id))
+        for t in task_res.scalars().all():
+            await db.delete(t)
+        cc_res = await db.execute(select(ContentCalendarItem).where(ContentCalendarItem.project_id == p.id))
+        for cc in cc_res.scalars().all():
+            cc.project_id = None
+        await db.delete(p)
+
+    await db.commit()
+    return ApiResponse(data={"message": f"Cleaned {cleaned_count} demo projects", "count": cleaned_count})
 
 
 # Blueprint Templates

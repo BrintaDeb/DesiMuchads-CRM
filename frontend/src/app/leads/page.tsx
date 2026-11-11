@@ -149,7 +149,7 @@ export default function MobileLeadRadarPage() {
       if (savedLogs) {
         setCallLogs(JSON.parse(savedLogs));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // 2. Fetch Presets from Serverless API
@@ -161,7 +161,7 @@ export default function MobileLeadRadarPage() {
           if (res.data.data.regions?.length > 0) setRegions(res.data.data.regions);
           if (res.data.data.niches?.length > 0) setNiches(res.data.data.niches);
         }
-      } catch {}
+      } catch { }
     };
     fetchPresets();
   }, []);
@@ -221,7 +221,7 @@ export default function MobileLeadRadarPage() {
         if (typeof window !== "undefined" && "vibrate" in navigator) {
           try {
             navigator.vibrate([35, 50, 35]);
-          } catch {}
+          } catch { }
         }
 
         // Snap to closest Indian commercial hub
@@ -286,12 +286,12 @@ export default function MobileLeadRadarPage() {
         // Save to LocalStorage cache
         try {
           localStorage.setItem("muchad_mobile_leads_cache", JSON.stringify(leads));
-        } catch {}
+        } catch { }
 
         toast.success(`Radar discovered ${leads.length} high-intent buyer leads!`);
         return;
       }
-    } catch {}
+    } catch { }
 
     // Resilient client-side fallback
     const local = generateLocalLeads(payload);
@@ -302,7 +302,7 @@ export default function MobileLeadRadarPage() {
     setMobileTab("leads");
     try {
       localStorage.setItem("muchad_mobile_leads_cache", JSON.stringify(local));
-    } catch {}
+    } catch { }
     toast.success(`Discovered ${local.length} verified buyer leads!`);
     setIsLoading(false);
   };
@@ -327,7 +327,7 @@ export default function MobileLeadRadarPage() {
       }
       try {
         localStorage.setItem("muchad_mobile_bookmarks", JSON.stringify(Array.from(next)));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -358,7 +358,7 @@ export default function MobileLeadRadarPage() {
       const next = [entry, ...prev];
       try {
         localStorage.setItem("muchad_mobile_call_logs", JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
 
@@ -379,7 +379,7 @@ export default function MobileLeadRadarPage() {
         });
         toast.success("Lead details shared successfully!");
         return;
-      } catch {}
+      } catch { }
     }
 
     try {
@@ -1201,8 +1201,8 @@ export default function MobileLeadRadarPage() {
                           log.outcome === "INTERESTED"
                             ? "bg-emerald-500/20 text-emerald-300"
                             : log.outcome === "MEETING_SET"
-                            ? "bg-purple-500/20 text-purple-300"
-                            : "bg-slate-800 text-slate-400"
+                              ? "bg-purple-500/20 text-purple-300"
+                              : "bg-slate-800 text-slate-400"
                         )}
                       >
                         {log.outcome}

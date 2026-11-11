@@ -589,65 +589,10 @@ async def seed_initial_agency_data():
             session.add_all([client1, lead1])
             await session.flush()
 
-            # Seed a project for Bombay Chai Co
-            proj1 = Project(
-                client_id=client1.id,
-                name="Bombay Chai Co. - Q4 Social Retainer",
-                service_type=ServiceType.SOCIAL_MEDIA_RETAINER,
-                start_date=date.today(),
-                target_end_date=date.today() + timedelta(days=30),
-                status=ProjectStatus.ACTIVE,
-                progress_percentage=45.0,
-            )
-            session.add(proj1)
-            await session.flush()
-
-            # Seed Tasks with DAG dependency
-            task1 = Task(
-                project_id=proj1.id,
-                title="Q4 Campaign Moodboard & Pillar Strategy",
-                description="Finalize 4 cultural themes for winter festive season.",
-                assigned_to_id=manager_user.id,
-                priority=TaskPriority.HIGH,
-                status=TaskStatus.COMPLETED,
-                estimated_hours=4.0,
-                logged_hours=4.5,
-                due_at=datetime.utcnow() - timedelta(days=2),
-                completed_at=datetime.utcnow() - timedelta(days=2),
-            )
-            session.add(task1)
-            await session.flush()
-
-            task2 = Task(
-                project_id=proj1.id,
-                title="10x Festive Ad Copy & Reel Scripts",
-                description="Write script concepts focusing on warm winter masala chai ritual.",
-                assigned_to_id=specialist_user.id,
-                priority=TaskPriority.HIGH,
-                status=TaskStatus.IN_PROGRESS,
-                estimated_hours=6.0,
-                logged_hours=2.0,
-                due_at=datetime.utcnow() + timedelta(days=2),
-                depends_on_task_id=task1.id,
-            )
-            task3 = Task(
-                project_id=proj1.id,
-                title="Festive Motion Graphics & Packaging Reel",
-                description="Render 3D chai packaging reveal with upbeat acoustic rhythm.",
-                assigned_to_id=specialist_user.id,
-                priority=TaskPriority.MEDIUM,
-                status=TaskStatus.BLOCKED,
-                estimated_hours=8.0,
-                logged_hours=0.0,
-                due_at=datetime.utcnow() + timedelta(days=5),
-                depends_on_task_id=task2.id,  # Blocked until task 2 completes!
-            )
-            session.add_all([task2, task3])
-
-            # Seed sample content item
+            # Seed sample content item (clean, no demo project attached)
             item1 = ContentCalendarItem(
                 client_id=client1.id,
-                project_id=proj1.id,
+                project_id=None,
                 platform=ContentPlatform.INSTAGRAM,
                 content_type=ContentType.REEL,
                 title="Monsoon to Winter: The Ultimate Masala Chai Brew Guide",

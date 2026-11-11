@@ -214,3 +214,20 @@ async def log_task_time(
     await db.refresh(task)
     return ApiResponse(data=TaskOut.model_validate(task))
 
+
+@router.delete("/{id}", response_model=ApiResponse[dict])
+async def delete_task(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Task).where(Task.id == id, Task.deleted_at.is_(None))
+    res = await db.execute(query)
+    task = res.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    await db.delete(task)
+    await db.commit()
+    return ApiResponse(data={"message": f"Task '{task.title}' deleted successfully", "id": str(id)})
+

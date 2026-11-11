@@ -41,77 +41,7 @@ interface DAGTask {
   is_blocked: boolean;
 }
 
-const initialTasks: DAGTask[] = [
-  {
-    id: "t101",
-    project_name: "Bombay Chai Co. - Q4 Social Retainer",
-    title: "Q4 Campaign Moodboard & Pillar Strategy",
-    description: "Finalize 4 cultural themes for winter festive season.",
-    assignee: "Aarav Sharma",
-    priority: "HIGH",
-    status: "COMPLETED",
-    estimated_hours: 4.0,
-    logged_hours: 4.5,
-    due_date: "2026-11-05",
-    is_blocked: false,
-  },
-  {
-    id: "t102",
-    project_name: "Bombay Chai Co. - Q4 Social Retainer",
-    title: "10x Festive Ad Copy & Reel Scripts",
-    description: "Write script concepts focusing on warm winter masala chai ritual.",
-    assignee: "Priya Patel",
-    priority: "HIGH",
-    status: "IN_PROGRESS",
-    estimated_hours: 6.0,
-    logged_hours: 2.5,
-    due_date: "2026-11-12",
-    depends_on_task_id: "t101",
-    prerequisite_title: "Q4 Campaign Moodboard & Pillar Strategy",
-    is_blocked: false,
-  },
-  {
-    id: "t103",
-    project_name: "Bombay Chai Co. - Q4 Social Retainer",
-    title: "Festive Packaging 3D Render & Motion Reel",
-    description: "Render 3D chai packaging reveal with upbeat acoustic rhythm.",
-    assignee: "Rohan Verma",
-    priority: "MEDIUM",
-    status: "BLOCKED",
-    estimated_hours: 8.0,
-    logged_hours: 0.0,
-    due_date: "2026-11-16",
-    depends_on_task_id: "t102",
-    prerequisite_title: "10x Festive Ad Copy & Reel Scripts",
-    is_blocked: true,
-  },
-  {
-    id: "t104",
-    project_name: "Urban Vibe Apparels - Setup",
-    title: "Google Tag Manager & Meta Conversions API Audit",
-    description: "Configure server-side event deduplication for e-com checkout.",
-    assignee: "Aarav Sharma",
-    priority: "CRITICAL",
-    status: "TODO",
-    estimated_hours: 5.0,
-    logged_hours: 0.0,
-    due_date: "2026-11-10",
-    is_blocked: false,
-  },
-  {
-    id: "t105",
-    project_name: "Bombay Chai Co. - Q4 Social Retainer",
-    title: "Client Portal Deliverables Sign-off",
-    description: "Review comments and gather final client approval on assets.",
-    assignee: "Aarav Sharma",
-    priority: "MEDIUM",
-    status: "INTERNAL_QA",
-    estimated_hours: 2.0,
-    logged_hours: 1.0,
-    due_date: "2026-11-18",
-    is_blocked: false,
-  },
-];
+const initialTasks: DAGTask[] = [];
 
 const columns: { key: TaskStatus; label: string; color: string }[] = [
   { key: "TODO", label: "To Do", color: "bg-slate-400" },
@@ -123,6 +53,7 @@ const columns: { key: TaskStatus; label: string; color: string }[] = [
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<DAGTask[]>(initialTasks);
+  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -134,7 +65,7 @@ export default function TasksPage() {
 
   // New task form
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskProject, setNewTaskProject] = useState("Bombay Chai Co. - Q4 Social Retainer");
+  const [newTaskProject, setNewTaskProject] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("Priya Patel");
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("HIGH");
   const [newTaskHours, setNewTaskHours] = useState(4.0);
@@ -146,7 +77,7 @@ export default function TasksPage() {
   const fetchBackendTasks = async () => {
     try {
       const res = await api.get("/tasks/");
-      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+      if (res.data?.data && Array.isArray(res.data.data)) {
         const mapped: DAGTask[] = res.data.data.map((t: any) => ({
           id: t.id,
           project_name: t.project?.name || "Agency Operations",
@@ -165,12 +96,26 @@ export default function TasksPage() {
         setTasks(mapped);
       }
     } catch (e) {
-      // Offline fallback retained
+      // Offline fallback
     }
+  };
+
+  const fetchAvailableProjects = async () => {
+    try {
+      const res = await api.get("/projects/");
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        const names = res.data.data.map((p: any) => p.name).filter(Boolean);
+        setAvailableProjects(names);
+        if (names.length > 0) {
+          setNewTaskProject(names[0]);
+        }
+      }
+    } catch {}
   };
 
   useEffect(() => {
     fetchBackendTasks();
+    fetchAvailableProjects();
 
     // Listen to realtime WebSocket updates from other phones/desktops
     const unsubscribe = realtime.subscribe((msg: any) => {
@@ -181,6 +126,7 @@ export default function TasksPage() {
         msg?.type === "TASK_MUTATION"
       ) {
         fetchBackendTasks();
+        fetchAvailableProjects();
       }
     });
 
@@ -369,7 +315,27 @@ export default function TasksPage() {
 
       {/* Main View: Kanban Mode (Odoo Signature) */}
       {viewMode === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start overflow-x-auto pb-4">
+        filteredTasks.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 shadow-xs my-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 text-[#714B67] flex items-center justify-center mx-auto border border-purple-100">
+              <KanbanSquare className="w-7 h-7" />
+            </div>
+            <div className="max-w-md mx-auto space-y-1.5">
+              <h3 className="text-base font-bold text-slate-900">No Active Projects or Tasks</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                All demo projects have been cleaned. Create your first real agency project deliverable with DAG dependency tracking.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsNewTaskModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold rounded-lg shadow-sm transition active:scale-95"
+            >
+              <Plus size={14} />
+              <span>Create Project Task</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start overflow-x-auto pb-4">
           {columns.map((col) => {
             if (mobileActiveColumn !== "ALL" && mobileActiveColumn !== col.key) {
               return null;
@@ -544,7 +510,28 @@ export default function TasksPage() {
             );
           })}
         </div>
+        )
       ) : viewMode === "list" ? (
+        filteredTasks.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 shadow-xs my-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 text-[#714B67] flex items-center justify-center mx-auto border border-purple-100">
+              <ListIcon className="w-7 h-7" />
+            </div>
+            <div className="max-w-md mx-auto space-y-1.5">
+              <h3 className="text-base font-bold text-slate-900">No Project Deliverables Found</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                All demo projects have been cleaned. Create your first real agency project deliverable with DAG dependency tracking.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsNewTaskModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold rounded-lg shadow-sm transition active:scale-95"
+            >
+              <Plus size={14} />
+              <span>Create Project Task</span>
+            </button>
+          </div>
+        ) : (
         /* List Mode (Odoo Task Table) */
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
@@ -593,6 +580,7 @@ export default function TasksPage() {
             </table>
           </div>
         </div>
+        )
       ) : (
         /* Gantt & Critical-Path Timeline Mode (Odoo Calendar View) */
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -762,15 +750,39 @@ export default function TasksPage() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">PROJECT</label>
-            <select
-              value={newTaskProject}
-              onChange={(e) => setNewTaskProject(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#714B67] focus:bg-white"
-            >
-              <option value="Bombay Chai Co. - Q4 Social Retainer">Bombay Chai Co. - Q4 Social Retainer</option>
-              <option value="Urban Vibe Apparels - Setup">Urban Vibe Apparels - Setup</option>
-            </select>
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">PROJECT NAME *</label>
+            {availableProjects.length > 0 ? (
+              <div className="space-y-1.5">
+                <select
+                  value={newTaskProject}
+                  onChange={(e) => setNewTaskProject(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#714B67] focus:bg-white"
+                >
+                  {availableProjects.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                  <option value="__custom__">+ Custom Project Name...</option>
+                </select>
+                {newTaskProject === "__custom__" && (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter project name..."
+                    onChange={(e) => setNewTaskProject(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#714B67] focus:bg-white"
+                  />
+                )}
+              </div>
+            ) : (
+              <input
+                type="text"
+                required
+                value={newTaskProject}
+                onChange={(e) => setNewTaskProject(e.target.value)}
+                placeholder="e.g. Brand Identity & Performance Sprint"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#714B67] focus:bg-white"
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

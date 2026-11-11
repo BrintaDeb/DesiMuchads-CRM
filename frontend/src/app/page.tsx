@@ -102,7 +102,7 @@ const teamLiveStatus = [
     status: "ACTIVE",
     mode: "In-Office",
     worked: "05:42:10",
-    task: "Q4 Strategy Sync: Bombay Chai Co.",
+    task: "Client Success Review & Growth Strategy",
   },
   {
     name: "Priya Patel",
@@ -111,7 +111,7 @@ const teamLiveStatus = [
     status: "ON_BREAK",
     mode: "Remote",
     worked: "04:18:45",
-    task: "10x Festive Ad Copy & Reel Scripts",
+    task: "Brand Copy & Campaign Ideation",
   },
   {
     name: "Rohan Verma",
@@ -120,7 +120,7 @@ const teamLiveStatus = [
     status: "ACTIVE",
     mode: "In-Office",
     worked: "05:02:18",
-    task: "Festive Packaging 3D Render",
+    task: "Creative Video & Motion Production",
   },
 ];
 
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         summary: "Currently 4 team members active. 8 tasks in flight, 1 blocked by DAG dependencies, and 0 SLA breaches.",
         operational_recommendations: [
           "Unblock downstream creative tasks as soon as copywriting QA completes.",
-          "Review Bombay Chai Co. deliverable in Client Review state.",
+          "Review pending deliverables in Client Review state.",
           "Audit attendance regularization requests for remote team members.",
         ],
       });
