@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
+import { forwardToBackend } from "@/lib/backendProxy";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
-  try {
-    const backendRes = await fetch("http://127.0.0.1:8000/api/v1/crm/lead-generator/presets", {
-      headers: { Authorization: authHeader },
-    });
-    if (backendRes.ok) {
-      const backendData = await backendRes.json();
-      return NextResponse.json(backendData);
-    }
-  } catch {}
+  const backendData = await forwardToBackend("/crm/lead-generator/presets", {
+    method: "GET",
+    headers: { Authorization: authHeader },
+    timeoutMs: 1500,
+  });
+  if (backendData && backendData.data) {
+    return NextResponse.json(backendData);
+  }
   const regions = [
     {
       city: "Mumbai",

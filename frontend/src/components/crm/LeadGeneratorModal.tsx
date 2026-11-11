@@ -40,7 +40,8 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { generateLocalLeads } from "@/lib/leadGeneratorEngine";
+import { generateLocalLeads, findNearestHub } from "@/lib/leadGeneratorEngine";
+import Link from "next/link";
 
 // Dynamically import Leaflet Map to avoid SSR errors
 const PinpointLeafletMap = dynamic(() => import("./PinpointLeafletMap"), {
@@ -235,7 +236,23 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
         const lng = pos.coords.longitude;
         setCenterLat(lat);
         setCenterLng(lng);
-        setIsCustomMode(true);
+
+        // Instant smart snap to nearest commercial hub
+        const nearest = findNearestHub(lat, lng);
+        if (nearest.is_close_match) {
+          setSelectedCity(nearest.city);
+          setSelectedArea(nearest.area);
+          setIsCustomMode(false);
+          setPinpointLandmark(`Near ${nearest.area}`);
+          toast.success(`📍 Locked onto ${nearest.area}, ${nearest.city}`);
+        } else {
+          setIsCustomMode(true);
+          setCustomCity(nearest.city || "Local Metro");
+          setCustomArea(`GPS Spot (${lat.toFixed(3)}°, ${lng.toFixed(3)}°)`);
+          setPinpointLandmark(`Exact GPS (${lat.toFixed(4)}°, ${lng.toFixed(4)}°)`);
+          toast.success(`📍 GPS Fixed: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+        }
+
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`,
@@ -247,23 +264,9 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
               const parts = data.display_name.split(",");
               const resolvedName = parts.slice(0, 3).join(",").trim();
               setPinpointLandmark(resolvedName);
-              setCustomArea(parts[0]?.trim() || "");
-              const city =
-                data.address?.city ||
-                data.address?.town ||
-                data.address?.suburb ||
-                data.address?.state ||
-                "Current Location";
-              setCustomCity(city);
-              toast.success(`📍 Precise GPS: ${resolvedName}`);
-            } else {
-              toast.success(`📍 GPS Fixed: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
             }
-          } else {
-            toast.success(`📍 GPS Fixed: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
           }
         } catch {
-          toast.success(`📍 GPS Fixed: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
         } finally {
           setIsLocating(false);
         }
@@ -639,13 +642,24 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 -mr-1 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition active:scale-95 shrink-0"
-            aria-label="Close modal"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/leads"
+              onClick={onClose}
+              className="px-2.5 py-1.5 rounded-lg bg-purple-50 text-[#714B67] hover:bg-purple-100 text-xs font-semibold flex items-center gap-1 transition active:scale-95"
+              title="Open dedicated mobile workstation"
+            >
+              <ExternalLink size={13} />
+              <span className="hidden sm:inline">Mobile Fullscreen</span>
+            </Link>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 -mr-1 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition active:scale-95 shrink-0"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}

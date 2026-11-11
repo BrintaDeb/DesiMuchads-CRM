@@ -325,6 +325,11 @@ export interface DiscoveredLead {
   cold_whatsapp_text: string;
   whatsapp_click_url: string;
   cold_phone_call_script?: string;
+  google_maps_directions_url?: string;
+  is_bookmarked?: boolean;
+  call_status?: "NOT_CALLED" | "INTERESTED" | "CALL_BACK" | "MEETING_SET" | "GATEKEEPER" | "NOT_INTERESTED";
+  call_notes?: string;
+  last_called_at?: string;
 }
 
 export interface AreaDetail {

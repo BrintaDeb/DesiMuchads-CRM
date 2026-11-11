@@ -21,6 +21,7 @@ interface AppTab {
 
 const topTabs: AppTab[] = [
   { name: "CRM", href: "/crm", activePattern: "/crm", permission: "crm:read" },
+  { name: "Lead Radar", href: "/leads", activePattern: "/leads", permission: "crm:read" },
   { name: "Projects & Tasks", href: "/tasks", activePattern: "/tasks", permission: "projects:read" },
   { name: "Content Approvals", href: "/content-calendar", activePattern: "/content-calendar", permission: "content:read" },
   { name: "Attendance & HR", href: "/attendance", activePattern: "/attendance", permission: "attendance:read" },

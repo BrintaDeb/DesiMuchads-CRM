@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
+import { forwardToBackend } from "@/lib/backendProxy";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
 
-    // Attempt live FastAPI backend outreach dispatch first
-    try {
-      const backendRes = await fetch("http://127.0.0.1:8000/api/v1/crm/lead-generator/dispatch-outreach", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
-        body: JSON.stringify(body),
-      });
-      if (backendRes.ok) {
-        const backendData = await backendRes.json();
-        return NextResponse.json(backendData);
-      }
-    } catch {}
+    // Attempt live FastAPI backend outreach dispatch first if reachable
+    const backendData = await forwardToBackend("/crm/lead-generator/dispatch-outreach", {
+      method: "POST",
+      headers: { Authorization: authHeader },
+      body,
+      timeoutMs: 2000,
+    });
+
+    if (backendData && backendData.data) {
+      return NextResponse.json(backendData);
+    }
 
     // Resilient offline fallback
     const leads = body.leads || [];

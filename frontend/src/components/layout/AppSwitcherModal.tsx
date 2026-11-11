@@ -17,6 +17,7 @@ import {
   Search,
   Lock,
   MessageSquare,
+  Compass,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -38,6 +39,15 @@ const odooApps: AppItem[] = [
     href: "/crm",
     color: "bg-orange-500",
     icon: Users,
+    permission: "crm:read",
+  },
+  {
+    id: "leads",
+    name: "Lead Radar & Field GPS",
+    description: "Geospatial buyer beacon, live mobile GPS hunter, 1-tap call & WhatsApp",
+    href: "/leads",
+    color: "bg-[#714B67]",
+    icon: Compass,
     permission: "crm:read",
   },
   {

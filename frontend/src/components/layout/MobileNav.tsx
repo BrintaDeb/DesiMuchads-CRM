@@ -68,9 +68,8 @@ export function MobileNav() {
           </Link>
 
           {/* 3. Center Highlight: Mobile Lead Radar Trigger */}
-          <button
-            type="button"
-            onClick={() => setLeadRadarOpen(true)}
+          <Link
+            href="/leads"
             className="flex flex-col items-center justify-center flex-1 h-full py-0.5 text-center relative -top-1.5 min-w-[56px] min-h-[48px] group"
             title="Search Leads & Pinpoint on Map"
           >
@@ -79,10 +78,15 @@ export function MobileNav() {
               <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full animate-ping" />
               <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
-            <span className="text-[10px] font-bold text-[#714B67] leading-none mt-0.5 tracking-tight">
+            <span
+              className={cn(
+                "text-[10px] font-bold leading-none mt-0.5 tracking-tight",
+                pathname.startsWith("/leads") ? "text-[#714B67]" : "text-zinc-600"
+              )}
+            >
               Radar
             </span>
-          </button>
+          </Link>
 
           {/* 4. Tasks & Deliverables */}
           <Link

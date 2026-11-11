@@ -240,13 +240,42 @@ export default function CRMPage() {
           const localOnly = prev.filter(
             (p) => !remoteIds.has(p.id) && !remoteCompanyNames.has(p.company_name.toLowerCase())
           );
-          return [...localOnly, ...remoteDeals];
+          const combined = [...localOnly, ...remoteDeals];
+          try {
+            localStorage.setItem("muchad_crm_deals", JSON.stringify(combined));
+          } catch {}
+          return combined;
         });
       }
-    } catch {}
+    } catch {
+      // Fallback to offline stored deals
+      try {
+        const cached = localStorage.getItem("muchad_crm_deals");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDeals(parsed);
+          }
+        }
+      } catch {}
+    }
   };
 
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem("muchad_crm_deals");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDeals((prev) => {
+            const parsedIds = new Set(parsed.map((p: any) => p.id));
+            const existingUnique = prev.filter((e) => !parsedIds.has(e.id));
+            return [...parsed, ...existingUnique];
+          });
+        }
+      }
+    } catch {}
+
     refreshDeals();
     const handleInjected = (e: any) => {
       let incomingDeals: any[] = [];
@@ -272,7 +301,11 @@ export default function CRMPage() {
         setDeals((prev) => {
           const existingNames = new Set(prev.map((d) => d.company_name.toLowerCase()));
           const newUnique = incomingDeals.filter((d) => !existingNames.has(d.company_name.toLowerCase()));
-          return [...newUnique, ...prev];
+          const updated = [...newUnique, ...prev];
+          try {
+            localStorage.setItem("muchad_crm_deals", JSON.stringify(updated));
+          } catch {}
+          return updated;
         });
       }
       refreshDeals();

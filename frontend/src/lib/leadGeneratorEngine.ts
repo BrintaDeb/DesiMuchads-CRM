@@ -20,6 +20,129 @@ export function haversineDistance(
   return Math.round(R * c * 100) / 100;
 }
 
+export interface NearestHubResult {
+  city: string;
+  area: string;
+  distance_km: number;
+  center_lat: number;
+  center_lng: number;
+  is_close_match: boolean;
+}
+
+/**
+ * Automatically detects the nearest commercial hotspot & metro city
+ * given an employee's live mobile GPS coordinates.
+ */
+export function findNearestHub(lat: number, lng: number): NearestHubResult {
+  let closestArea = "Bandra West & Pali Hill";
+  let closestCity = "Mumbai";
+  let minDistance = Infinity;
+  let centerLat = 18.9284;
+  let centerLng = 72.8282;
+
+  // 1. Check all localized commercial hotspots
+  for (const [areaName, coords] of Object.entries(HOTSPOT_COORDINATES)) {
+    const dist = haversineDistance(lat, lng, coords[0], coords[1]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestArea = areaName;
+      centerLat = coords[0];
+      centerLng = coords[1];
+    }
+  }
+
+  // 2. Check metro anchor points
+  for (const [cityName, coords] of Object.entries(METRO_COORDINATES)) {
+    const dist = haversineDistance(lat, lng, coords[0], coords[1]);
+    if (dist < 40 && dist < minDistance * 1.5) {
+      closestCity = cityName;
+      break;
+    }
+  }
+
+  // 3. Map hotspot areas to primary metro cities
+  if (
+    closestArea.includes("Mumbai") ||
+    closestArea.includes("BKC") ||
+    closestArea.includes("Bandra") ||
+    closestArea.includes("Lower Parel") ||
+    closestArea.includes("Andheri") ||
+    closestArea.includes("Powai") ||
+    closestArea.includes("Juhu")
+  ) {
+    closestCity = "Mumbai";
+  } else if (
+    closestArea.includes("Indiranagar") ||
+    closestArea.includes("Koramangala") ||
+    closestArea.includes("HSR") ||
+    closestArea.includes("Whitefield") ||
+    closestArea.includes("MG Road")
+  ) {
+    closestCity = "Bengaluru";
+  } else if (
+    closestArea.includes("Gurugram") ||
+    closestArea.includes("Connaught") ||
+    closestArea.includes("Noida") ||
+    closestArea.includes("Aerocity")
+  ) {
+    closestCity = "Delhi NCR";
+  } else if (
+    closestArea.includes("Hitec") ||
+    closestArea.includes("Gachibowli") ||
+    closestArea.includes("Jubilee")
+  ) {
+    closestCity = "Hyderabad";
+  } else if (
+    closestArea.includes("Koregaon") ||
+    closestArea.includes("Baner") ||
+    closestArea.includes("Viman")
+  ) {
+    closestCity = "Pune";
+  } else if (
+    closestArea.includes("SG Highway") ||
+    closestArea.includes("Bodakdev") ||
+    closestArea.includes("Sindhu")
+  ) {
+    closestCity = "Ahmedabad";
+  } else if (
+    closestArea.includes("Park Street") ||
+    closestArea.includes("Salt Lake")
+  ) {
+    closestCity = "Kolkata";
+  } else if (
+    closestArea.includes("Nungambakkam") ||
+    closestArea.includes("OMR")
+  ) {
+    closestCity = "Chennai";
+  } else if (
+    closestArea.includes("C-Scheme") ||
+    closestArea.includes("Malviya")
+  ) {
+    closestCity = "Jaipur";
+  } else if (
+    closestArea.includes("Sector 17") ||
+    closestArea.includes("Mohali")
+  ) {
+    closestCity = "Chandigarh";
+  } else if (
+    closestArea.includes("Goa") ||
+    closestArea.includes("Calangute") ||
+    closestArea.includes("Panaji") ||
+    closestArea.includes("Assagao")
+  ) {
+    closestCity = "Goa";
+  }
+
+  return {
+    city: closestCity,
+    area: closestArea,
+    distance_km: Math.round(minDistance * 10) / 10,
+    center_lat: centerLat,
+    center_lng: centerLng,
+    is_close_match: minDistance <= 35,
+  };
+}
+
 export const METRO_COORDINATES: Record<string, [number, number]> = {
   Mumbai: [18.9284, 72.8282],
   Bengaluru: [12.9716, 77.5946],
@@ -561,6 +684,9 @@ export function generateLocalLeads(options: GenerateLeadsOptions): DiscoveredLea
       cold_whatsapp_text: waText,
       whatsapp_click_url: waUrl,
       cold_phone_call_script: `Hi ${founderName.split(" ")[0]} ji, this is calling from The Desi Muchads. I was looking at ${companyName}'s commercial operations at ${landmarkAddress.split(",")[0]}...`,
+      google_maps_directions_url: `https://www.google.com/maps/dir/?api=1&destination=${leadLat},${leadLng}`,
+      is_bookmarked: false,
+      call_status: "NOT_CALLED",
     });
   }
 
