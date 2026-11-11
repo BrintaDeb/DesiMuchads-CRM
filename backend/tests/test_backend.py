@@ -25,22 +25,6 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_db():
-    import asyncio
-    async def _init():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-    asyncio.run(_init())
-    yield
-    async def _teardown():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-        await test_engine.dispose()
-    asyncio.run(_teardown())
-
-
 @pytest.mark.asyncio
 async def test_vault_fernet_encryption_roundtrip():
     secret = "AIzaSySecretApiKey1234567890"

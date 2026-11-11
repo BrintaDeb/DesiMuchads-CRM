@@ -27,57 +27,6 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_db():
-    async def _init():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-        async with TestingSessionLocal() as session:
-            admin = User(
-                id=uuid.uuid4(),
-                email="admin@desimuchads.com",
-                phone="+91 98765 00001",
-                employee_id="DM-ADMIN-001",
-                password_hash=hash_password("DesiMuchads@admin98"),
-                full_name="Muchad Founder",
-                role=UserRole.SUPER_ADMIN,
-                department="Leadership",
-                permissions=ALL_PERMISSION_IDS,
-                is_active=True,
-            )
-            lead = Client(
-                id=uuid.uuid4(),
-                company_name="Raw Earth Organics",
-                industry="D2C Cosmetics",
-                primary_contact_name="Vikram Malhotra",
-                contact_email="vikram@rawearth.in",
-                contact_phone="+91 99887 66554",
-                deal_stage=DealStage.LEAD_CAPTURED,
-                deal_value=85000.0,
-                status=ClientStatus.LEAD,
-            )
-            session.add_all([admin, lead])
-            await session.commit()
-
-    asyncio.run(_init())
-    yield
-
-    async def _teardown():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-        await test_engine.dispose()
-
-    asyncio.run(_teardown())
-
-
-@pytest.fixture(autouse=True)
-def clear_rate_limiter():
-    """Ensure in-memory rate limiter is fresh for every test."""
-    with auth_rate_limiter._lock:
-        auth_rate_limiter._failures.clear()
-
-
 @pytest.mark.asyncio
 async def test_dual_login_email_and_phone():
     """Verifies that an agent can log in using either their Email ID or their Phone Number."""

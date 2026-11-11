@@ -23,41 +23,6 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_db():
-    async def _init():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-        async with TestingSessionLocal() as session:
-            admin = User(
-                email="admin@desimuchads.com",
-                password_hash=hash_password("DesiMuchads@admin98"),
-                full_name="Muchad Founder (Super Admin)",
-                role=UserRole.SUPER_ADMIN,
-                department="Leadership",
-                permissions=ALL_PERMISSION_IDS,
-            )
-            spec = User(
-                email="designer@desimuchads.com",
-                password_hash=hash_password("spec123456"),
-                full_name="Rohit Creative",
-                role=UserRole.SPECIALIST,
-                department="Creative",
-                permissions=["projects:read", "content:read"],
-            )
-            session.add_all([admin, spec])
-            await session.commit()
-
-    asyncio.run(_init())
-    yield
-    async def _teardown():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-        await test_engine.dispose()
-    asyncio.run(_teardown())
-
-
 @pytest.mark.asyncio
 async def test_permissions_matrix_endpoint():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:

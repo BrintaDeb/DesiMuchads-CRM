@@ -1,11 +1,14 @@
 from typing import List, Optional
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_env_files = [str(BASE_DIR / ".env"), ".env"]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_env_files,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
@@ -30,8 +33,8 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "muchadcrm_db"
-    DATABASE_URL: str = "postgresql+asyncpg://muchad_admin:muchad_secret_password_2026@localhost:5432/muchadcrm_db"
-    DATABASE_URL_SYNC: str = "postgresql://muchad_admin:muchad_secret_password_2026@localhost:5432/muchadcrm_db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./muchadcrm.db"
+    DATABASE_URL_SYNC: str = "sqlite:///./muchadcrm.db"
 
     # Redis & Celery
     REDIS_URL: str = "redis://localhost:6379/0"
