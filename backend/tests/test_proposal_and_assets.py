@@ -65,7 +65,7 @@ async def test_crm_proposal_api_endpoints():
     async with TestingSessionLocal() as session:
         admin = User(
             email=f"prop_admin_{uuid.uuid4().hex[:6]}@desimuchads.com",
-            password_hash=hash_password("admin123456"),
+            password_hash=hash_password("DesiMuchads@admin98"),
             full_name="Proposal Admin",
             role=UserRole.SUPER_ADMIN,
         )
@@ -123,7 +123,7 @@ async def test_s3_and_asset_storage_flow():
     async with TestingSessionLocal() as session:
         user = User(
             email=f"asset_user_{uuid.uuid4().hex[:6]}@desimuchads.com",
-            password_hash=hash_password("admin123456"),
+            password_hash=hash_password("DesiMuchads@admin98"),
             full_name="Asset Manager",
             role=UserRole.SPECIALIST,
         )

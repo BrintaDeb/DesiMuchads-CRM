@@ -242,7 +242,28 @@ export default function CRMPage() {
 
   useEffect(() => {
     refreshDeals();
-    const handleInjected = () => refreshDeals();
+    const handleInjected = (e: any) => {
+      if (e.detail?.deals && e.detail.deals.length > 0) {
+        setDeals((prev) => [...e.detail.deals, ...prev]);
+      } else if (e.detail?.leads && e.detail.leads.length > 0) {
+        const converted = e.detail.leads.map((l: any) => ({
+          id: l.temp_id || `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          company_name: l.company_name,
+          industry: l.niche,
+          contact_name: l.founder_name,
+          email: l.email,
+          phone: l.phone,
+          deal_stage: "LEAD_CAPTURED" as DealStage,
+          deal_value: l.deal_value || 75000,
+          retainer_amount: l.deal_value || 75000,
+          health_score: l.intent_score || 90,
+          last_activity_hours: 0,
+          is_decaying: false,
+        }));
+        setDeals((prev) => [...converted, ...prev]);
+      }
+      refreshDeals();
+    };
     window.addEventListener("muchad:leads_injected", handleInjected);
     return () => window.removeEventListener("muchad:leads_injected", handleInjected);
   }, []);

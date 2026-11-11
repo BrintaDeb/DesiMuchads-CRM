@@ -21,9 +21,20 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [loginId, setLoginId] = useState("admin@desimuchads.com");
-  const [password, setPassword] = useState("admin123456");
+  const [password, setPassword] = useState("DesiMuchads@admin98");
   const [isLoading, setIsLoading] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
+  const [inactivityNotice, setInactivityNotice] = useState(false);
+
+  // Check if user reached login page due to 5-minute inactivity
+  useEffect(() => {
+    try {
+      const lastActive = parseInt(localStorage.getItem("muchad_last_activity") || "0", 10);
+      if (lastActive && Date.now() - lastActive >= 5 * 60 * 1000) {
+        setInactivityNotice(true);
+      }
+    } catch {}
+  }, []);
 
   // Auto-decrement lockout timer if rate limit is hit
   useEffect(() => {
@@ -55,6 +66,9 @@ export default function LoginPage() {
 
       const data = res.data?.data;
       if (data?.access_token && data?.user) {
+        try {
+          localStorage.setItem("muchad_last_activity", String(Date.now()));
+        } catch {}
         login(data.access_token, data.user);
         toast.success(`Welcome back, ${data.user.full_name}!`);
         router.push("/");
@@ -132,6 +146,19 @@ export default function LoginPage() {
             <p className="text-xs text-[#64748B]">Enterprise Agency Operating System</p>
           </div>
         </div>
+
+        {/* Inactivity Security Notice */}
+        {inactivityNotice && lockoutSeconds === null && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-bold block">5-Minute Inactivity Lockout Triggered</span>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Session was locked after 5 minutes of inactivity. Please enter your credentials to authenticate and resume.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Security Lockout Banner (if Rate Limited) */}
         {lockoutSeconds !== null && lockoutSeconds > 0 && (
@@ -226,7 +253,7 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => fillQuickDemo("admin@desimuchads.com", "admin123456")}
+              onClick={() => fillQuickDemo("admin@desimuchads.com", "DesiMuchads@admin98")}
               className="p-2 rounded-lg bg-[#F8F9FA] hover:bg-[#F1F5F9] border border-[#E2E8F0] text-left transition-colors"
             >
               <div className="font-semibold text-[#1E293B] flex items-center gap-1">
@@ -238,7 +265,7 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => fillQuickDemo("+91 98765 00001", "admin123456")}
+              onClick={() => fillQuickDemo("+91 98765 00001", "DesiMuchads@admin98")}
               className="p-2 rounded-lg bg-[#F8F9FA] hover:bg-[#F1F5F9] border border-[#E2E8F0] text-left transition-colors"
             >
               <div className="font-semibold text-[#1E293B] flex items-center gap-1">

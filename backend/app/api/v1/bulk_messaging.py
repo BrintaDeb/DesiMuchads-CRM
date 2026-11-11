@@ -160,3 +160,4 @@ async def list_campaigns(
     """
     campaigns = await bulk_messaging_service.list_recent_campaigns(db, limit=limit)
     return ApiResponse(data=campaigns)
+

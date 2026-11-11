@@ -32,7 +32,7 @@ def setup_test_db():
         async with TestingSessionLocal() as session:
             admin = User(
                 email="admin@desimuchads.com",
-                password_hash=hash_password("admin123456"),
+                password_hash=hash_password("DesiMuchads@admin98"),
                 full_name="Muchad Founder (Super Admin)",
                 role=UserRole.SUPER_ADMIN,
                 department="Leadership",
@@ -115,7 +115,7 @@ async def test_admin_password_verify_and_credential_management():
         headers = {"Authorization": "Bearer demo_token_super_admin"}
 
         # 1. Correct master admin password verification
-        v_res = await ac.post("/api/v1/users/verify-admin-password", json={"password": "admin123456"}, headers=headers)
+        v_res = await ac.post("/api/v1/users/verify-admin-password", json={"password": "DesiMuchads@admin98"}, headers=headers)
         assert v_res.status_code == 200
         assert v_res.json()["data"]["verified"] is True
 

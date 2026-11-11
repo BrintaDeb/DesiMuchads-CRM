@@ -79,6 +79,7 @@ async def seed_initial_agency_data():
             admin_user.can_edit_projects = True
             admin_user.can_manage_billing = True
             admin_user.permissions = ALL_PERMISSION_IDS
+            admin_user.password_hash = hash_password("DesiMuchads@admin98")
             if not admin_user.employee_id:
                 admin_user.employee_id = "DM-ADMIN-001"
             if not admin_user.phone:
@@ -147,7 +148,7 @@ async def seed_initial_agency_data():
             admin_user = User(
                 email="admin@desimuchads.com",
                 phone="+91 98765 00001",
-                password_hash=hash_password("admin123456"),
+                password_hash=hash_password("DesiMuchads@admin98"),
                 full_name="Muchad Founder (Super Admin)",
                 employee_id="DM-ADMIN-001",
                 role=UserRole.SUPER_ADMIN,

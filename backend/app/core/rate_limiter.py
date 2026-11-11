@@ -197,3 +197,4 @@ def record_clearance_success(request: Request, user_id: str = "admin") -> None:
     ip = get_client_ip(request)
     key = f"clearance:{user_id}:{ip}"
     auth_rate_limiter.reset(key)
+

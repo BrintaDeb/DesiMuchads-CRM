@@ -39,7 +39,7 @@ def setup_test_db():
                 email="admin@desimuchads.com",
                 phone="+91 98765 00001",
                 employee_id="DM-ADMIN-001",
-                password_hash=hash_password("admin123456"),
+                password_hash=hash_password("DesiMuchads@admin98"),
                 full_name="Muchad Founder",
                 role=UserRole.SUPER_ADMIN,
                 department="Leadership",
@@ -182,7 +182,7 @@ async def test_bulk_messaging_templates_and_audiences():
         # Login as Admin
         login_res = await ac.post("/api/v1/auth/login", json={
             "email": "admin@desimuchads.com",
-            "password": "admin123456",
+            "password": "DesiMuchads@admin98",
         })
         token = login_res.json()["data"]["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
@@ -209,7 +209,7 @@ async def test_bulk_messaging_preview_and_dispatch():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         login_res = await ac.post("/api/v1/auth/login", json={
             "email": "admin@desimuchads.com",
-            "password": "admin123456",
+            "password": "DesiMuchads@admin98",
         })
         token = login_res.json()["data"]["access_token"]
         headers = {"Authorization": f"Bearer {token}"}

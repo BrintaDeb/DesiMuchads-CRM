@@ -7,6 +7,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { InstallAppBanner } from "@/components/layout/InstallAppBanner";
 import { LeadGeneratorModal } from "@/components/crm/LeadGeneratorModal";
 import { BulkMessagingModal } from "@/components/crm/BulkMessagingModal";
+import { InactivityGuard } from "@/components/auth/InactivityGuard";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { realtime } from "@/lib/websocket";
@@ -90,6 +91,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         isOpen={bulkMessagingOpen}
         onClose={() => setBulkMessagingOpen(false)}
       />
+
+      <InactivityGuard />
     </div>
   );
 }

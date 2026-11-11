@@ -784,3 +784,4 @@ export const BulkMessagingModal: React.FC<BulkMessagingModalProps> = ({
     </div>
   );
 };
+

@@ -271,7 +271,7 @@ Please log in to review your project board, track daily attendance, and access c
       }
     } catch (err: any) {
       // Local fallback unlock if demo password matches
-      if (adminPasswordInput === "admin123456") {
+      if (adminPasswordInput === "DesiMuchads@admin98") {
         setIsAdminUnlocked(true);
         if (typeof window !== "undefined") {
           sessionStorage.setItem("muchad_admin_unlocked", "true");
@@ -648,7 +648,7 @@ Please log in to review your project board, track daily attendance, and access c
                 type="button"
                 onClick={() => {
                   setAdminEmailInput("admin@desimuchads.com");
-                  setAdminPasswordInput("admin123456");
+                  setAdminPasswordInput("DesiMuchads@admin98");
                   toast.info("Pre-filled Super Admin Master Credentials");
                 }}
                 className="text-[#714B67] hover:underline font-semibold flex items-center gap-1"
@@ -661,7 +661,7 @@ Please log in to review your project board, track daily attendance, and access c
                 type="button"
                 onClick={() => {
                   setAdminEmailInput("admin@desimuchads.com");
-                  setAdminPasswordInput("admin123456");
+                  setAdminPasswordInput("DesiMuchads@admin98");
                   handleVerifyAdminGate();
                 }}
                 className="px-2.5 py-1 bg-purple-50 text-[#714B67] border border-purple-200 rounded font-bold hover:bg-purple-100 transition shadow-2xs"
