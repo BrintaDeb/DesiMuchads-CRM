@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
+  try {
+    const backendRes = await fetch("http://127.0.0.1:8000/api/v1/crm/lead-generator/presets", {
+      headers: { Authorization: authHeader },
+    });
+    if (backendRes.ok) {
+      const backendData = await backendRes.json();
+      return NextResponse.json(backendData);
+    }
+  } catch {}
   const regions = [
     {
       city: "Mumbai",

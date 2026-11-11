@@ -162,8 +162,14 @@ export default function PinpointLeafletMap({
   useEffect(() => {
     if (mapReady) {
       triggerInvalidateSize();
-      const t = setTimeout(triggerInvalidateSize, 120);
-      return () => clearTimeout(t);
+      const t1 = setTimeout(triggerInvalidateSize, 80);
+      const t2 = setTimeout(triggerInvalidateSize, 250);
+      const t3 = setTimeout(triggerInvalidateSize, 500);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
     }
   }, [invalidateSignal, mapReady, triggerInvalidateSize]);
 

@@ -619,31 +619,32 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
       <div className="bg-white border-0 sm:border sm:border-slate-200 rounded-none sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[100dvh] sm:h-auto sm:max-h-[94vh] flex flex-col overflow-hidden text-slate-800">
         
         {/* Modal Top Header */}
-        <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#714B67] text-white flex items-center justify-center shadow-xs shrink-0">
-              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+        <div className="pt-[max(0.75rem,env(safe-area-inset-top))] px-4 sm:px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/95 shrink-0 select-none">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#714B67] text-white flex items-center justify-center shadow-xs shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-pulse" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-bold text-sm sm:text-base text-slate-900 tracking-tight">
-                  High-Precision Google Maps & Landmark Lead Engine
+                <h3 className="font-bold text-xs sm:text-base text-slate-900 tracking-tight truncate">
+                  Google Maps & Landmark Lead Engine
                 </h3>
-                <span className="text-[10px] font-mono bg-purple-100 text-[#714B67] font-bold px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                <span className="text-[9px] sm:text-[10px] font-mono bg-purple-100 text-[#714B67] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shrink-0">
                   <Radio className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
-                  <span>Geo-Radius Radar v2.5</span>
+                  <span>Geo Radar v2.5</span>
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="hidden sm:block text-[11px] text-slate-500">
                 Pinpoint commercial landmarks, set radial coverage (0.5–25km), and crawl verified buyer dossiers with 1-click outreach.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition"
+            className="w-10 h-10 -mr-1 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition active:scale-95 shrink-0"
+            aria-label="Close modal"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
@@ -1171,10 +1172,14 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                                 <Mail className="w-3 h-3 text-slate-400" />
                                 {lead.email}
                               </span>
-                              <span className="flex items-center gap-1 font-mono text-slate-600">
-                                <Phone className="w-3 h-3 text-slate-400" />
-                                {lead.phone}
-                              </span>
+                              <a
+                                href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
+                                className="flex items-center gap-1 font-mono text-slate-700 hover:text-[#714B67] hover:underline font-semibold"
+                                title="1-Tap Direct Call"
+                              >
+                                <Phone className="w-3 h-3 text-[#714B67]" />
+                                <span>{lead.phone}</span>
+                              </a>
                               {lead.linkedin_url && (
                                 <a
                                   href={lead.linkedin_url}
@@ -1205,27 +1210,37 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                           </div>
 
                           <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* 1-Tap Direct Call */}
+                            <a
+                              href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-2xs active:scale-95"
+                              title="1-Tap Phone Call to Decision Maker"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[11px]">Call</span>
+                            </a>
+
                             {/* Fast Action to Reply: 1-Click WhatsApp Launcher */}
                             <a
                               href={lead.whatsapp_click_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs"
+                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs active:scale-95"
                               title="Fast Action to Reply: Launch WhatsApp with Tailored Pitch"
                             >
                               <MessageSquare className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Fast WhatsApp</span>
+                              <span className="text-[11px]">WhatsApp</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
                             </a>
 
                             {/* Fast Action to Reply: 1-Click Fast Email */}
                             <a
                               href={`mailto:${lead.email}?subject=${encodeURIComponent(lead.cold_email_subject)}&body=${encodeURIComponent(lead.cold_email_body)}`}
-                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95"
                               title="Fast Action to Reply: Launch Email with Cold Proposal"
                             >
                               <Mail className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Fast Email</span>
+                              <span className="hidden sm:inline text-[11px]">Email</span>
                             </a>
 
                             {/* Fast Action to Reply: 1-Click Copy Pitch */}
@@ -1235,7 +1250,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                                 navigator.clipboard.writeText(lead.cold_whatsapp_text);
                                 toast.success(`Fast Reply pitch copied for ${lead.company_name}!`);
                               }}
-                              className="px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#714B67] border border-purple-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                              className="px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#714B67] border border-purple-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95"
                               title="Fast Action: Copy Tailored Pitch to Clipboard"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -1245,7 +1260,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                             <button
                               onClick={() => setExpandedOutreachId(isExpanded ? null : lead.temp_id)}
                               className={cn(
-                                "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition border",
+                                "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition border active:scale-95",
                                 isExpanded
                                   ? "bg-slate-800 text-white border-slate-800"
                                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
@@ -1478,8 +1493,8 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="px-4 sm:px-5 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex items-center gap-2">
+        <div className="px-3 sm:px-5 py-2.5 sm:py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.5rem))]">
+          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
             <span className="text-xs font-semibold text-slate-600">Dispatched Via:</span>
             <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px]">
               {(["ALL", "WHATSAPP", "EMAIL"] as const).map((ch) => (
@@ -1487,9 +1502,9 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
                   key={ch}
                   onClick={() => setSelectedChannel(ch)}
                   className={cn(
-                    "px-2.5 py-1 rounded-md font-semibold transition",
+                    "px-2 sm:px-2.5 py-1 rounded-md font-semibold transition active:scale-95",
                     selectedChannel === ch
-                      ? "bg-white text-slate-900 shadow-2xs"
+                      ? "bg-white text-slate-900 shadow-2xs font-bold"
                       : "text-slate-500 hover:text-slate-800"
                   )}
                 >
@@ -1499,11 +1514,11 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportCSV}
               disabled={selectedCount === 0}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 disabled:opacity-40"
+              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 disabled:opacity-40 active:scale-95"
               title="Download CSV for external cold caller tools"
             >
               <Download size={14} />
@@ -1513,16 +1528,16 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
             <button
               onClick={() => handleInjectToPipeline(false)}
               disabled={selectedCount === 0 || isInjecting}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 disabled:opacity-40"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 disabled:opacity-40 active:scale-95"
             >
               <Check size={14} />
-              <span>Inject ({selectedCount}) to Pipeline</span>
+              <span className="truncate">Inject ({selectedCount})</span>
             </button>
 
             <button
               onClick={() => handleInjectToPipeline(true)}
               disabled={selectedCount === 0 || isInjecting}
-              className="px-4 py-2 bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition disabled:opacity-40"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 sm:py-2 bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition disabled:opacity-40 active:scale-95"
             >
               {isInjecting ? (
                 <>
@@ -1532,7 +1547,7 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Dispatch Outreach & Inject</span>
+                  <span>Dispatch Outreach & Inject ({selectedCount})</span>
                 </>
               )}
             </button>
