@@ -21,51 +21,17 @@ import {
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function ClientPortalPage() {
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"approvals" | "vault" | "billing">("approvals");
 
   // Client Deliverables Awaiting Approval
-  const [deliverables, setDeliverables] = useState([
-    {
-      id: "del_1",
-      title: "Winter Masala Ritual: Kadak Chai Symphony",
-      format: "Instagram Reel (1080x1920)",
-      copy: "There is nothing quite like a steaming cup of handmade kadak chai on a cold winter evening. Tap the link in bio to shop our freshly ground spices! ☕🍂 #BombayChai #ChaiLove",
-      media_url: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80",
-      scheduled_for: "2026-11-14",
-      status: "CLIENT_REVIEW",
-      version: 1,
-    },
-    {
-      id: "del_2",
-      title: "Festive Gifting Hamper Carousel",
-      format: "Instagram Carousel (1080x1350)",
-      copy: "Looking for the ultimate Diwali gift? Gift our handcrafted royal wooden box packed with 5 artisanal teas and brass infuser. Limited holiday batch. 🎁🪔",
-      media_url: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80",
-      scheduled_for: "2026-11-18",
-      status: "APPROVED",
-      version: 1,
-    },
-  ]);
+  const [deliverables, setDeliverables] = useState<any[]>([]);
 
   // Client Vault Secrets
-  const [vaultSecrets, setVaultSecrets] = useState([
-    {
-      id: "v1",
-      platform: "Meta Ads & Business Manager",
-      username: "client@bombaychaico.com",
-      status: "SECURED_AES_256",
-      updated_at: "2026-11-09",
-    },
-    {
-      id: "v2",
-      platform: "Google Ads Account ID",
-      username: "782-990-1123",
-      status: "SECURED_AES_256",
-      updated_at: "2026-11-09",
-    },
-  ]);
+  const [vaultSecrets, setVaultSecrets] = useState<any[]>([]);
 
   const [newSecretPlatform, setNewSecretPlatform] = useState("");
   const [newSecretValue, setNewSecretValue] = useState("");
@@ -132,7 +98,7 @@ export default function ClientPortalPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-[#1E293B]">
-                Bombay Chai Co. — Client Portal
+                {user?.role === "CLIENT" ? user.full_name : "Agency Client Portal"}
               </h1>
               <p className="text-xs text-[#64748B]">
                 Powered by <strong>The Desi Muchads</strong> • Single source of truth for deliverables, vault keys, and invoices.
@@ -144,7 +110,7 @@ export default function ClientPortalPage() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EBFBEE] text-[#1E7E34] border border-[#C3E6CB]">
             <span className="w-2 h-2 rounded-full bg-[#1E7E34] animate-pulse" />
-            Active Retainer (₹75,000/mo)
+            Client Account Active
           </span>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono bg-[#F8F9FA] text-[#475569] border border-[#CBD5E1]">
             <ShieldCheck size={13} className="text-[#008784]" />
@@ -213,93 +179,105 @@ export default function ClientPortalPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {deliverables.map((del) => (
-              <div
-                key={del.id}
-                className="bg-white border border-[#E2E8F0] rounded shadow-sm overflow-hidden flex flex-col justify-between"
-              >
-                <div className="p-5 space-y-4">
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[#F8F9FA] text-[#475569] border border-[#CBD5E1]">
-                      {del.format}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-medium px-2.5 py-0.5 rounded-full border",
-                        del.status === "APPROVED"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : del.status === "CLIENT_REVIEW"
-                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                          : "bg-rose-50 text-rose-700 border-rose-200"
-                      )}
-                    >
-                      {del.status === "APPROVED"
-                        ? "Approved & Scheduled"
-                        : del.status === "CLIENT_REVIEW"
-                        ? "Awaiting Your Sign-off"
-                        : "Revision Requested"}
-                    </span>
-                  </div>
-
-                  {/* Asset Media Preview */}
-                  <div className="h-60 w-full rounded bg-[#F1F5F9] overflow-hidden border border-[#E2E8F0]">
-                    <img
-                      src={del.media_url}
-                      alt={del.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Title & Copy */}
-                  <div>
-                    <h3 className="text-base font-bold text-[#1E293B]">{del.title}</h3>
-                    <div className="mt-2 p-3 rounded bg-[#F8F9FA] border border-[#E2E8F0] text-xs text-[#334155] leading-relaxed">
-                      {del.copy}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-[#64748B] pt-1">
-                    <span>Scheduled for: <strong>{del.scheduled_for}</strong></span>
-                    <span>Version: <strong>v{del.version}</strong></span>
-                  </div>
-                </div>
-
-                {/* Action Footer */}
-                <div className="p-4 bg-[#F8F9FA] border-t border-[#E2E8F0]">
-                  {del.status === "CLIENT_REVIEW" ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => handleApprove(del.id)}
-                        className="flex items-center justify-center gap-1.5 py-2 rounded bg-[#008784] hover:bg-[#00706D] text-white font-semibold text-xs transition-colors shadow-xs"
-                      >
-                        <Check size={15} />
-                        <span>Approve Creative</span>
-                      </button>
-                      <button
-                        onClick={() => handleOpenRevision(del.id)}
-                        className="flex items-center justify-center gap-1.5 py-2 rounded bg-white hover:bg-rose-50 text-rose-700 font-semibold text-xs border border-rose-300 transition-colors shadow-xs"
-                      >
-                        <RotateCcw size={15} />
-                        <span>Request Changes</span>
-                      </button>
-                    </div>
-                  ) : del.status === "APPROVED" ? (
-                    <div className="text-center py-1 text-[#059669] font-medium text-xs flex items-center justify-center gap-1.5">
-                      <CheckCircle2 size={16} />
-                      <span>Approved by client. Handed off to publishing daemon.</span>
-                    </div>
-                  ) : (
-                    <div className="text-center py-1 text-[#E11D48] font-medium text-xs flex items-center justify-center gap-1.5">
-                      <RotateCcw size={16} />
-                      <span>Revision requested. Creative team is preparing v{del.version}.</span>
-                    </div>
-                  )}
-                </div>
+          {deliverables.length === 0 ? (
+            <div className="bg-white border border-[#E2E8F0] rounded-xl p-16 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                <CheckCircle2 size={24} />
               </div>
-            ))}
-          </div>
+              <h4 className="font-bold text-sm text-[#1E293B]">All Clear — No Deliverables Pending Review</h4>
+              <p className="text-xs text-[#64748B] max-w-sm mx-auto">
+                When your assigned agency specialists produce social posts, reels, or campaigns, they will appear here for your review and one-click approval.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {deliverables.map((del) => (
+                <div
+                  key={del.id}
+                  className="bg-white border border-[#E2E8F0] rounded shadow-sm overflow-hidden flex flex-col justify-between"
+                >
+                  <div className="p-5 space-y-4">
+                    {/* Card Header */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[#F8F9FA] text-[#475569] border border-[#CBD5E1]">
+                        {del.format}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-medium px-2.5 py-0.5 rounded-full border",
+                          del.status === "APPROVED"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : del.status === "CLIENT_REVIEW"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
+                        )}
+                      >
+                        {del.status === "APPROVED"
+                          ? "Approved & Scheduled"
+                          : del.status === "CLIENT_REVIEW"
+                          ? "Awaiting Your Sign-off"
+                          : "Revision Requested"}
+                      </span>
+                    </div>
+
+                    {/* Asset Media Preview */}
+                    <div className="h-60 w-full rounded bg-[#F1F5F9] overflow-hidden border border-[#E2E8F0]">
+                      <img
+                        src={del.media_url}
+                        alt={del.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Title & Copy */}
+                    <div>
+                      <h3 className="text-base font-bold text-[#1E293B]">{del.title}</h3>
+                      <div className="mt-2 p-3 rounded bg-[#F8F9FA] border border-[#E2E8F0] text-xs text-[#334155] leading-relaxed">
+                        {del.copy}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-[#64748B] pt-1">
+                      <span>Scheduled for: <strong>{del.scheduled_for}</strong></span>
+                      <span>Version: <strong>v{del.version}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Action Footer */}
+                  <div className="p-4 bg-[#F8F9FA] border-t border-[#E2E8F0]">
+                    {del.status === "CLIENT_REVIEW" ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => handleApprove(del.id)}
+                          className="flex items-center justify-center gap-1.5 py-2 rounded bg-[#008784] hover:bg-[#00706D] text-white font-semibold text-xs transition-colors shadow-xs"
+                        >
+                          <Check size={15} />
+                          <span>Approve Creative</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenRevision(del.id)}
+                          className="flex items-center justify-center gap-1.5 py-2 rounded bg-white hover:bg-rose-50 text-rose-700 font-semibold text-xs border border-rose-300 transition-colors shadow-xs"
+                        >
+                          <RotateCcw size={15} />
+                          <span>Request Changes</span>
+                        </button>
+                      </div>
+                    ) : del.status === "APPROVED" ? (
+                      <div className="text-center py-1 text-[#059669] font-medium text-xs flex items-center justify-center gap-1.5">
+                        <CheckCircle2 size={16} />
+                        <span>Approved by client. Handed off to publishing daemon.</span>
+                      </div>
+                    ) : (
+                      <div className="text-center py-1 text-[#E11D48] font-medium text-xs flex items-center justify-center gap-1.5">
+                        <RotateCcw size={16} />
+                        <span>Revision requested. Creative team is preparing v{del.version}.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -332,20 +310,26 @@ export default function ClientPortalPage() {
               </div>
 
               <div className="divide-y divide-[#E2E8F0]">
-                {vaultSecrets.map((s) => (
-                  <div key={s.id} className="py-3 flex items-center justify-between text-xs">
-                    <div className="space-y-0.5">
-                      <span className="font-bold text-[#1E293B]">{s.platform}</span>
-                      <div className="text-xs text-[#64748B] font-mono">
-                        Identifier: {s.username} • Last synced: {s.updated_at}
-                      </div>
-                    </div>
-
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      AES-256 Encrypted
-                    </span>
+                {vaultSecrets.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No platform credentials stored yet. Submit access credentials below to share them securely with the agency.
                   </div>
-                ))}
+                ) : (
+                  vaultSecrets.map((s) => (
+                    <div key={s.id} className="py-3 flex items-center justify-between text-xs">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-[#1E293B]">{s.platform}</span>
+                        <div className="text-xs text-[#64748B] font-mono">
+                          Identifier: {s.username} • Last synced: {s.updated_at}
+                        </div>
+                      </div>
+
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        AES-256 Encrypted
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -414,37 +398,14 @@ export default function ClientPortalPage() {
               <p className="text-xs text-[#64748B]">All invoices comply with Indian GST rules (SAC 998311).</p>
             </div>
             <span className="text-xs font-mono bg-[#F8F9FA] px-2.5 py-1 rounded border border-[#CBD5E1] text-[#475569]">
-              Client GSTIN: 27AABCB1234D1Z5
+              Verified GSTIN Ledger
             </span>
           </div>
 
-          <div className="divide-y divide-[#E2E8F0]">
-            <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-[#1E293B]">INV-202611-0001</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Paid
-                  </span>
-                </div>
-                <div className="text-xs text-[#64748B]">
-                  Monthly Retainer (Social Media + Performance Ads) • Billed on 01 Nov 2026
-                </div>
-                <div className="text-xs font-mono text-[#334155]">
-                  Subtotal: ₹75,000 + 18% GST (CGST ₹6,750 + SGST ₹6,750) = <strong>₹88,500</strong>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toast.success("Invoice PDF receipt downloaded")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#F8F9FA] hover:bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-xs transition-colors"
-                >
-                  <Download size={14} />
-                  <span>Download Tax PDF</span>
-                </button>
-              </div>
-            </div>
+          <div className="py-12 text-center text-xs text-slate-400 space-y-2">
+            <Receipt size={24} className="mx-auto text-slate-300" />
+            <p className="font-semibold text-slate-700">No Invoices Issued Yet</p>
+            <p className="text-[11px] text-slate-400">Tax invoices and payment receipts will appear here as billing cycles complete.</p>
           </div>
         </div>
       )}

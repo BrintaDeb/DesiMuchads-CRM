@@ -42,48 +42,7 @@ const revenueData = [
   { month: "Nov", mrr: 675000 },
 ];
 
-const clientProfitabilityData = [
-  {
-    client: "Bombay Chai Co.",
-    industry: "D2C Beverage",
-    retainer: 75000,
-    logged_hours: 28.5,
-    delivery_cost: 25500,
-    net_margin: 49500,
-    margin_pct: 66.0,
-    health: "OPTIMAL",
-  },
-  {
-    client: "Urban Vibe Apparels",
-    industry: "E-Commerce Fashion",
-    retainer: 120000,
-    logged_hours: 52.0,
-    delivery_cost: 46800,
-    net_margin: 73200,
-    margin_pct: 61.0,
-    health: "OPTIMAL",
-  },
-  {
-    client: "FinPulse Global",
-    industry: "FinTech B2B",
-    retainer: 90000,
-    logged_hours: 48.0,
-    delivery_cost: 43200,
-    net_margin: 46800,
-    margin_pct: 52.0,
-    health: "HEALTHY",
-  },
-  {
-    client: "Raw Earth Organics",
-    industry: "Organic Cosmetics",
-    retainer: 65000,
-    logged_hours: 44.0,
-    delivery_cost: 39600,
-    net_margin: 25400,
-    margin_pct: 39.1,
-    health: "RISK",
-  },
-];
+const clientProfitabilityData: any[] = [];
 
 const teamLiveStatus = [
   {
@@ -388,7 +347,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between font-semibold text-slate-800">
                     <span>Monthly Social Retainer</span>
                     <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-mono">
-                      Active (4 clients)
+                      Blueprint Ready
                     </span>
                   </div>
                   <p className="text-slate-500 text-[11px]">
@@ -400,7 +359,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between font-semibold text-slate-800">
                     <span>Performance Ad Campaign</span>
                     <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-mono">
-                      Active (2 clients)
+                      Blueprint Ready
                     </span>
                   </div>
                   <p className="text-slate-500 text-[11px]">
@@ -444,7 +403,7 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-500">Monthly Retainer vs Specialist Cost of Delivery = Realized Agency Gross Margin %</p>
             </div>
             <div className="text-right font-mono text-xs text-slate-600">
-              Avg Agency Margin: <strong className="text-emerald-700 text-sm">59.5%</strong>
+              Avg Agency Margin: <strong className="text-emerald-700 text-sm">--</strong>
             </div>
           </div>
 
@@ -463,43 +422,57 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-normal">
-                {clientProfitabilityData.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">{item.client}</td>
-                    <td className="py-3 px-4 text-slate-500">{item.industry}</td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
-                      {formatCurrency(item.retainer)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-600">
-                      {item.logged_hours}h
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-500">
-                      {formatCurrency(item.delivery_cost)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
-                      {formatCurrency(item.net_margin)}
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono font-bold">
-                      <span className={item.margin_pct >= 60 ? "text-emerald-700" : item.margin_pct >= 40 ? "text-sky-700" : "text-amber-700"}>
-                        {item.margin_pct.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={cn(
-                          "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                          item.health === "OPTIMAL"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : item.health === "HEALTHY"
-                            ? "bg-sky-50 text-sky-700 border-sky-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        )}
-                      >
-                        {item.health === "OPTIMAL" ? "Optimal Margin" : item.health === "HEALTHY" ? "Healthy" : "Margin Risk (<40%)"}
-                      </span>
+                {clientProfitabilityData.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                      <div className="max-w-xs mx-auto space-y-1.5">
+                        <Building2 size={22} className="mx-auto text-slate-300" />
+                        <p className="font-semibold text-xs text-slate-700">No Active Client Profitability Records</p>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Unit economics will compute in real-time as billable hours are tracked against won retainer contracts.
+                        </p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  clientProfitabilityData.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900">{item.client}</td>
+                      <td className="py-3 px-4 text-slate-500">{item.industry}</td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
+                        {formatCurrency(item.retainer)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-slate-600">
+                        {item.logged_hours}h
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-slate-500">
+                        {formatCurrency(item.delivery_cost)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                        {formatCurrency(item.net_margin)}
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono font-bold">
+                        <span className={item.margin_pct >= 60 ? "text-emerald-700" : item.margin_pct >= 40 ? "text-sky-700" : "text-amber-700"}>
+                          {item.margin_pct.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                            item.health === "OPTIMAL"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : item.health === "HEALTHY"
+                              ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          )}
+                        >
+                          {item.health === "OPTIMAL" ? "Optimal Margin" : item.health === "HEALTHY" ? "Healthy" : "Margin Risk (<40%)"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

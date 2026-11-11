@@ -16,12 +16,12 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     data: {
-      pipeline_value: 480000,
-      active_deals_count: 4,
-      weighted_forecast: 375000,
-      monthly_recurring_revenue: 480000,
-      stalled_deals_count: 1,
-      average_deal_size: 120000,
+      pipeline_value: 0,
+      active_deals_count: 0,
+      weighted_forecast: 0,
+      monthly_recurring_revenue: 0,
+      stalled_deals_count: 0,
+      average_deal_size: 0,
     },
     meta: { timestamp: new Date().toISOString() },
     error: null,

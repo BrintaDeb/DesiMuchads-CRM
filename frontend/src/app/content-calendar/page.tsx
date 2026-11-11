@@ -39,61 +39,7 @@ interface ContentCard {
   client_feedback?: string;
 }
 
-const initialContent: ContentCard[] = [
-  {
-    id: "c1",
-    client_name: "Bombay Chai Co.",
-    platform: "INSTAGRAM",
-    content_type: "REEL",
-    title: "The Winter Masala Ritual: Kadak Chai Symphony",
-    caption:
-      "There is nothing quite like a steaming cup of handmade kadak chai on a cold evening. Tap the link in bio to shop our freshly ground spices! ☕🍂 #BombayChai #ChaiLove #WinterVibes",
-    media_url: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80",
-    scheduled_for: "2026-11-14T18:00:00Z",
-    approval_status: "CLIENT_REVIEW",
-    version: 1,
-  },
-  {
-    id: "c2",
-    client_name: "Urban Vibe Apparels",
-    platform: "LINKEDIN",
-    content_type: "CAROUSEL",
-    title: "How Sustainable D2C Fashion Scales Without Sacrificing Margins",
-    caption:
-      "A breakdown of the supply chain architecture behind zero-waste organic cotton apparel. Swipe through for the unit economics framework.",
-    media_url: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=800&q=80",
-    scheduled_for: "2026-11-16T10:30:00Z",
-    approval_status: "INTERNAL_QA",
-    version: 2,
-    client_feedback: "Previous feedback: Make slide 3 chart easier to read.",
-  },
-  {
-    id: "c3",
-    client_name: "Bombay Chai Co.",
-    platform: "META_ADS",
-    content_type: "STATIC",
-    title: "Festive Gift Box Early Bird Offer (ROAS Retargeting)",
-    caption:
-      "Save 25% on our Royal Heritage Tea Hampers. Handcrafted brass strainer included with first 500 orders. Shop now before holiday cutoff.",
-    media_url: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80",
-    scheduled_for: "2026-11-18T12:00:00Z",
-    approval_status: "APPROVED",
-    version: 1,
-  },
-  {
-    id: "c4",
-    client_name: "FinPulse Global",
-    platform: "YOUTUBE",
-    content_type: "VIDEO",
-    title: "API-First Banking: Explaining Webhooks & Ledger Immutability",
-    caption:
-      "A 60-second animated explainer showing how high-throughput transactional ledgers prevent double-spend errors in modern fintech.",
-    media_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
-    scheduled_for: "2026-11-20T14:00:00Z",
-    approval_status: "DRAFTING",
-    version: 1,
-  },
-];
+const initialContent: ContentCard[] = [];
 
 export default function ContentCalendarPage() {
   const [items, setItems] = useState<ContentCard[]>(initialContent);
@@ -103,7 +49,7 @@ export default function ContentCalendarPage() {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // Form state
-  const [newClient, setNewClient] = useState("Bombay Chai Co.");
+  const [newClient, setNewClient] = useState("");
   const [newPlatform, setNewPlatform] = useState<ContentPlatform>("INSTAGRAM");
   const [newType, setNewType] = useState<ContentType>("REEL");
   const [newTitle, setNewTitle] = useState("");
@@ -114,8 +60,8 @@ export default function ContentCalendarPage() {
 
   // AI Hook & Storyboard Studio state
   const [isAIHookStudioOpen, setIsAIHookStudioOpen] = useState(false);
-  const [hookBrand, setHookBrand] = useState("Bombay Chai Co.");
-  const [hookTopic, setHookTopic] = useState("Winter Kadak Masala Symphony");
+  const [hookBrand, setHookBrand] = useState("");
+  const [hookTopic, setHookTopic] = useState("");
   const [hookFormat, setHookFormat] = useState("REEL");
   const [isGeneratingHooks, setIsGeneratingHooks] = useState(false);
   const [generatedHooksData, setGeneratedHooksData] = useState<any>(null);
@@ -361,8 +307,28 @@ export default function ContentCalendarPage() {
 
       {/* Main Grid: Cards View */}
       {viewMode === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredItems.map((item) => (
+        filteredItems.length === 0 ? (
+          <div className="py-20 text-center bg-white rounded-xl border border-slate-200 shadow-xs">
+            <div className="max-w-sm mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto border border-slate-200">
+                <CalendarDays size={22} />
+              </div>
+              <h4 className="font-semibold text-sm text-slate-800">No Content Scheduled Yet</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Schedule social posts, reels, carousels, or ad creatives with multi-tier client approvals.
+              </p>
+              <button
+                onClick={() => setIsScheduleModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#714B67] text-white text-xs font-bold hover:bg-[#5A3B52] transition shadow-xs"
+              >
+                <Plus size={13} />
+                <span>Schedule First Deliverable</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredItems.map((item) => (
             <div
               key={item.id}
               className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group"
@@ -484,6 +450,7 @@ export default function ContentCalendarPage() {
             </div>
           ))}
         </div>
+        )
       ) : (
         /* List View */
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -501,34 +468,50 @@ export default function ContentCalendarPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">{item.title}</td>
-                    <td className="py-3 px-4 text-slate-700">{item.client_name}</td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
-                      {item.platform} • {item.content_type}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", getApprovalBadge(item.approval_status))}>
-                        {item.approval_status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-600">v{item.version}</td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
-                      {new Date(item.scheduled_for).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      {item.approval_status === "DRAFTING" && (
-                        <button
-                          onClick={() => handleSpecialistSubmit(item.id)}
-                          className="px-2 py-1 rounded bg-purple-50 text-[#714B67] hover:bg-purple-100 font-semibold text-[11px] border border-purple-200"
-                        >
-                          Submit QA
-                        </button>
-                      )}
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="max-w-xs mx-auto space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                          <CalendarDays size={20} />
+                        </div>
+                        <p className="font-semibold text-sm text-slate-700">No content items scheduled</p>
+                        <p className="text-xs text-slate-400">
+                          Use the "+ Schedule Deliverable" button to prepare posts.
+                        </p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900">{item.title}</td>
+                      <td className="py-3 px-4 text-slate-700">{item.client_name}</td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
+                        {item.platform} • {item.content_type}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", getApprovalBadge(item.approval_status))}>
+                          {item.approval_status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-600">v{item.version}</td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
+                        {new Date(item.scheduled_for).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {item.approval_status === "DRAFTING" && (
+                          <button
+                            onClick={() => handleSpecialistSubmit(item.id)}
+                            className="px-2 py-1 rounded bg-purple-50 text-[#714B67] hover:bg-purple-100 font-semibold text-[11px] border border-purple-200"
+                          >
+                            Submit QA
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -555,15 +538,14 @@ export default function ContentCalendarPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">CLIENT</label>
-              <select
+              <input
+                type="text"
+                required
+                placeholder="e.g. Acme Enterprise"
                 value={newClient}
                 onChange={(e) => setNewClient(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#714B67] focus:bg-white"
-              >
-                <option value="Bombay Chai Co.">Bombay Chai Co.</option>
-                <option value="Urban Vibe Apparels">Urban Vibe Apparels</option>
-                <option value="FinPulse Global">FinPulse Global</option>
-              </select>
+              />
             </div>
 
             <div>

@@ -105,38 +105,6 @@ class BulkMessagingService:
                 "city": "Metro Hub",
             })
 
-        # Fallback dummy sample if database is fresh
-        if not recipients:
-            recipients = [
-                {
-                    "contact_name": "Vikram Malhotra",
-                    "company_name": "Raw Earth Organics",
-                    "phone": "+91 99887 66554",
-                    "email": "vikram@rawearth.in",
-                    "deal_value": 85000,
-                    "niche": "D2C Cosmetics",
-                    "city": "Mumbai",
-                },
-                {
-                    "contact_name": "Neha Joshi",
-                    "company_name": "FinPulse Global",
-                    "phone": "+91 98112 33445",
-                    "email": "neha@finpulse.com",
-                    "deal_value": 200000,
-                    "niche": "FinTech Banking",
-                    "city": "Bengaluru",
-                },
-                {
-                    "contact_name": "Sneha Kapoor",
-                    "company_name": "Urban Vibe Apparels",
-                    "phone": "+91 91234 56789",
-                    "email": "sneha@urbanvibe.in",
-                    "deal_value": 120000,
-                    "niche": "E-Commerce Fashion",
-                    "city": "Delhi NCR",
-                },
-            ]
-
         return recipients
 
     async def preview_campaign(

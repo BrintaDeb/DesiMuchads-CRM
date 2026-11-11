@@ -35,35 +35,7 @@ interface VaultEntry {
   last_accessed: string;
 }
 
-const mockVault: VaultEntry[] = [
-  {
-    id: "sec_1",
-    client_name: "Bombay Chai Co.",
-    platform: "Meta Ads & Business Manager Access Token",
-    username: "client@bombaychaico.com",
-    is_decrypted: false,
-    decrypted_value: "EAABwzLixnjYBA...mock_meta_long_lived_token_8892",
-    last_accessed: "2026-11-08 14:22 UTC by Aarav Sharma",
-  },
-  {
-    id: "sec_2",
-    client_name: "Bombay Chai Co.",
-    platform: "Google Ads Service Account JSON",
-    username: "service-account@bombay-chai.iam.gserviceaccount.com",
-    is_decrypted: false,
-    decrypted_value: "eyJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsICJwcm9qZWN0X2lkIjogImJvbWJheS1jaGFpIn0=",
-    last_accessed: "2026-11-07 10:15 UTC by Muchad Founder",
-  },
-  {
-    id: "sec_3",
-    client_name: "Urban Vibe Apparels",
-    platform: "Shopify Store Admin API Secret Key",
-    username: "urbanvibe.myshopify.com",
-    is_decrypted: false,
-    decrypted_value: "mock_shopify_admin_token_sample",
-    last_accessed: "Never decrypted",
-  },
-];
+const mockVault: VaultEntry[] = [];
 
 interface SessionItem {
   id: string;
@@ -76,24 +48,10 @@ interface SessionItem {
 const mockSessions: SessionItem[] = [
   {
     id: "sess_1",
-    device_name: "Chrome 122 on Windows 11 (Current Workstation)",
-    ip_address: "103.21.124.89 (Mumbai, India)",
+    device_name: "Web Browser (Current Workstation)",
+    ip_address: "127.0.0.1 (Localhost)",
     last_seen_at: "Active Now",
     is_current: true,
-  },
-  {
-    id: "sess_2",
-    device_name: "Safari 17 on iPhone 15 Pro",
-    ip_address: "103.21.124.90 (Mumbai, India)",
-    last_seen_at: "2 hours ago",
-    is_current: false,
-  },
-  {
-    id: "sess_3",
-    device_name: "Edge 121 on macOS Sonoma",
-    ip_address: "49.207.211.12 (Bengaluru, India)",
-    last_seen_at: "Yesterday at 18:30 UTC",
-    is_current: false,
   },
 ];
 
@@ -266,8 +224,14 @@ export default function VaultPage() {
             </div>
 
             {filteredEntries.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#94A3B8]">
-                No secrets match your search.
+              <div className="p-12 text-center space-y-2">
+                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Key size={18} />
+                </div>
+                <p className="text-xs font-semibold text-slate-700">No brand credentials in vault</p>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Click "+ New Brand Secret" to securely store client API keys or production tokens.
+                </p>
               </div>
             ) : (
               filteredEntries.map((entry) => (
@@ -463,7 +427,7 @@ export default function VaultPage() {
                   type="text"
                   value={newSecret.client_name}
                   onChange={(e) => setNewSecret({ ...newSecret, client_name: e.target.value })}
-                  placeholder="e.g. Bombay Chai Co."
+                  placeholder="e.g. Acme Corp / Client Name"
                   className="w-full bg-[#F8F9FA] border border-[#CBD5E1] rounded p-2 text-xs text-[#1E293B] outline-none focus:border-[#714B67]"
                   required
                 />

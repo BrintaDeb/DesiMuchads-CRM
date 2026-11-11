@@ -166,23 +166,6 @@ export function CommandPalette() {
         }
       },
     },
-    // Quick Clients
-    {
-      id: "client-bombay",
-      category: "Clients",
-      title: "Bombay Chai Co. (Active Client)",
-      description: "D2C Beverage • Retainer INR 75,000/mo • Health 95%",
-      icon: Users,
-      action: () => router.push("/crm"),
-    },
-    {
-      id: "client-urban",
-      category: "Clients",
-      title: "Urban Vibe Apparels (Lead - Proposal Sent)",
-      description: "E-Commerce Fashion • Deal Value INR 1,20,000",
-      icon: Users,
-      action: () => router.push("/crm"),
-    },
   ];
 
   const filteredActions = actions.filter(

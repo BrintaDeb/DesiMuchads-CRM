@@ -15,29 +15,8 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
-    data: [
-      {
-        id: "c1",
-        company_name: "Raw Earth Organics",
-        industry: "D2C Cosmetics",
-        primary_contact_name: "Vikram Malhotra",
-        contact_email: "vikram@rawearth.in",
-        contact_phone: "+91 99887 66554",
-        status: "ACTIVE",
-        health_score: 90,
-      },
-      {
-        id: "c2",
-        company_name: "FinPulse Global",
-        industry: "FinTech Banking",
-        primary_contact_name: "Neha Joshi",
-        contact_email: "neha@finpulse.com",
-        contact_phone: "+91 98112 33445",
-        status: "ACTIVE",
-        health_score: 85,
-      },
-    ],
-    meta: { total_count: 2, timestamp: new Date().toISOString() },
+    data: [],
+    meta: { total_count: 0, timestamp: new Date().toISOString() },
     error: null,
   });
 }

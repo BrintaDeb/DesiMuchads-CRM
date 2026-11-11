@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { InvoiceStatus } from "@/types";
 import { OdooControlPanel, ViewMode } from "@/components/layout/OdooControlPanel";
 import { useAuthStore } from "@/stores/authStore";
+import { api } from "@/lib/api";
 
 interface InvoiceRow {
   id: string;
@@ -34,45 +35,7 @@ interface InvoiceRow {
   paid_at?: string;
 }
 
-const initialInvoices: InvoiceRow[] = [
-  {
-    id: "inv_1",
-    invoice_number: "INV-202611-0001",
-    client_name: "Bombay Chai Co.",
-    gst_tax_id: "27AABCB1234D1Z5",
-    subtotal: 75000,
-    tax_amount: 13500, // 18% GST
-    total_amount: 88500,
-    currency: "INR",
-    status: "PAID",
-    due_date: "2026-11-08",
-    paid_at: "2026-11-08T11:20:00Z",
-  },
-  {
-    id: "inv_2",
-    invoice_number: "INV-202611-0002",
-    client_name: "Urban Vibe Apparels",
-    gst_tax_id: "29XYZAB5678C1Z2",
-    subtotal: 120000,
-    tax_amount: 21600,
-    total_amount: 141600,
-    currency: "INR",
-    status: "SENT",
-    due_date: "2026-11-18",
-  },
-  {
-    id: "inv_3",
-    invoice_number: "INV-202610-0042",
-    client_name: "Apex Gaming Gear",
-    gst_tax_id: "07AAACR4455B1Z9",
-    subtotal: 95000,
-    tax_amount: 17100,
-    total_amount: 112100,
-    currency: "INR",
-    status: "OVERDUE",
-    due_date: "2026-10-25",
-  },
-];
+const initialInvoices: InvoiceRow[] = [];
 
 export default function BillingPage() {
   const { hasPermission } = useAuthStore();
@@ -84,6 +47,34 @@ export default function BillingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoiceForUPI, setSelectedInvoiceForUPI] = useState<InvoiceRow | null>(null);
   const upiDialogRef = React.useRef<HTMLDialogElement>(null);
+
+  React.useEffect(() => {
+    api
+      .get("/billing/invoices")
+      .then((res: any) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setInvoices(
+            list.map((i: any) => ({
+              id: i.id,
+              invoice_number: i.invoice_number,
+              client_name: i.client?.company_name || i.client_name || "Client",
+              gst_tax_id: i.client?.gst_tax_id || i.gst_tax_id || "N/A",
+              subtotal: i.subtotal || 0,
+              tax_amount: i.tax_amount || 0,
+              total_amount: i.total_amount || 0,
+              currency: i.currency || "INR",
+              status: i.status || "SENT",
+              due_date: i.due_date || "",
+              paid_at: i.paid_at,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Keep initial state
+      });
+  }, []);
 
   React.useEffect(() => {
     const dialog = upiDialogRef.current;
@@ -228,7 +219,22 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-normal">
-                {filteredInvoices.map((inv) => (
+                {filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-16 text-center">
+                      <div className="max-w-sm mx-auto space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto border border-slate-200">
+                          <Receipt size={22} />
+                        </div>
+                        <h4 className="font-semibold text-sm text-slate-800">No Invoices Generated Yet</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Tax invoices are automatically created upon winning deals in the CRM pipeline, or during monthly retainer automation cycles.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-[#714B67]">
                       {inv.invoice_number}
@@ -292,7 +298,7 @@ export default function BillingPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

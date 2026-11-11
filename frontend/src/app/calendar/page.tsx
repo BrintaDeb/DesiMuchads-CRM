@@ -24,80 +24,7 @@ import { MasterCalendarFeedItem } from "@/types";
 import { OdooControlPanel } from "@/components/layout/OdooControlPanel";
 import { toast } from "sonner";
 
-const initialEvents: MasterCalendarFeedItem[] = [
-  // Layer 1: Content Drops
-  {
-    id: "e1",
-    layer: "CONTENT",
-    title: "Kadak Chai Symphony (IG Reel)",
-    start: "2026-11-14T18:00:00Z",
-    end: "2026-11-14T19:00:00Z",
-    status: "CLIENT_REVIEW",
-    client_name: "Bombay Chai Co.",
-    metadata: { platform: "INSTAGRAM", format: "REEL" },
-  },
-  {
-    id: "e2",
-    layer: "CONTENT",
-    title: "D2C Fashion Economics (LinkedIn)",
-    start: "2026-11-16T10:30:00Z",
-    end: "2026-11-16T11:30:00Z",
-    status: "INTERNAL_QA",
-    client_name: "Urban Vibe Apparels",
-    metadata: { platform: "LINKEDIN", format: "CAROUSEL" },
-  },
-  // Layer 2: Task Hard Deadlines
-  {
-    id: "e3",
-    layer: "DEADLINE",
-    title: "10x Festive Ad Copy & Reel Scripts",
-    start: "2026-11-12T17:00:00Z",
-    end: "2026-11-12T17:00:00Z",
-    status: "IN_PROGRESS",
-    assigned_to_name: "Priya Patel",
-    metadata: { priority: "HIGH" },
-  },
-  {
-    id: "e4",
-    layer: "DEADLINE",
-    title: "Google Tag & Meta Pixel Audit",
-    start: "2026-11-10T12:00:00Z",
-    end: "2026-11-10T12:00:00Z",
-    status: "TODO",
-    assigned_to_name: "Aarav Sharma",
-    metadata: { priority: "CRITICAL" },
-  },
-  // Layer 3: Client Meetings
-  {
-    id: "e5",
-    layer: "MEETING",
-    title: "Bombay Chai Bi-Weekly Growth Sync",
-    start: "2026-11-13T14:00:00Z",
-    end: "2026-11-13T15:00:00Z",
-    client_name: "Bombay Chai Co.",
-    metadata: { meeting_link: "https://meet.google.com/xyz-muchad-sync" },
-  },
-  {
-    id: "e6",
-    layer: "MEETING",
-    title: "FinPulse Global - Technical Discovery",
-    start: "2026-11-15T16:00:00Z",
-    end: "2026-11-15T17:00:00Z",
-    client_name: "FinPulse Global",
-    metadata: { meeting_link: "https://meet.google.com/finpulse-demo" },
-  },
-  // Layer 4: Team Leaves
-  {
-    id: "e7",
-    layer: "LEAVE",
-    title: "Aarav Sharma (Earned Leave)",
-    start: "2026-11-20T00:00:00Z",
-    end: "2026-11-23T23:59:59Z",
-    status: "APPROVED",
-    assigned_to_name: "Aarav Sharma",
-    metadata: { reason: "Family Vacation" },
-  },
-];
+const initialEvents: MasterCalendarFeedItem[] = [];
 
 export default function CalendarPage() {
   const [events, setEvents] = useState<MasterCalendarFeedItem[]>(initialEvents);
@@ -592,7 +519,7 @@ export default function CalendarPage() {
                   type="text"
                   value={newEvent.title}
                   onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                  placeholder="e.g. Discovery Call with FinPulse"
+                  placeholder="e.g. Strategy & Growth Sync"
                   className="w-full bg-[#F8F9FA] border border-[#CBD5E1] rounded p-2 text-xs text-[#1E293B] outline-none focus:border-[#714B67]"
                   required
                 />
@@ -639,7 +566,7 @@ export default function CalendarPage() {
                   type="text"
                   value={newEvent.client_name}
                   onChange={(e) => setNewEvent({ ...newEvent, client_name: e.target.value })}
-                  placeholder="e.g. Bombay Chai Co."
+                  placeholder="e.g. Acme Corp / Client Name"
                   className="w-full bg-[#F8F9FA] border border-[#CBD5E1] rounded p-2 text-xs text-[#1E293B] outline-none"
                 />
               </div>

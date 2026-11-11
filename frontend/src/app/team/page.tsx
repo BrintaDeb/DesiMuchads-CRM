@@ -85,21 +85,6 @@ const initialDemoUsers: User[] = [
     is_active: true,
     created_at: new Date().toISOString(),
   },
-  {
-    id: "u-client",
-    employee_id: "DM-CLI-004",
-    email: "client@bombaychaico.com",
-    full_name: "Kabir Mehta (Bombay Chai Co)",
-    role: "CLIENT",
-    department: "External Stakeholder",
-    hourly_cost: 0,
-    weekly_capacity_hours: 0,
-    can_manage_automations: false,
-    can_edit_projects: false,
-    can_manage_billing: false,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
 ];
 
 export default function TeamManagementPage() {

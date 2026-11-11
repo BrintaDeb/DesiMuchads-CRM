@@ -51,64 +51,7 @@ interface DealCard {
   is_decaying: boolean;
 }
 
-const initialDeals: DealCard[] = [
-  {
-    id: "d1",
-    company_name: "Raw Earth Organics",
-    industry: "D2C Cosmetics",
-    contact_name: "Vikram Malhotra",
-    email: "vikram@rawearth.in",
-    phone: "+91 99887 66554",
-    deal_stage: "LEAD_CAPTURED",
-    deal_value: 85000,
-    retainer_amount: 85000,
-    health_score: 90,
-    last_activity_hours: 12,
-    is_decaying: false,
-  },
-  {
-    id: "d2",
-    company_name: "FinPulse Global",
-    industry: "FinTech Banking",
-    contact_name: "Neha Joshi",
-    email: "neha@finpulse.com",
-    phone: "+91 98112 33445",
-    deal_stage: "DISCOVERY_CALL",
-    deal_value: 200000,
-    retainer_amount: 200000,
-    health_score: 85,
-    last_activity_hours: 54, // >48h decaying
-    is_decaying: true,
-  },
-  {
-    id: "d3",
-    company_name: "Urban Vibe Apparels",
-    industry: "E-Commerce Fashion",
-    contact_name: "Sneha Kapoor",
-    email: "sneha@urbanvibe.in",
-    phone: "+91 91234 56789",
-    deal_stage: "PROPOSAL_SENT",
-    deal_value: 120000,
-    retainer_amount: 120000,
-    health_score: 95,
-    last_activity_hours: 18,
-    is_decaying: false,
-  },
-  {
-    id: "d4",
-    company_name: "Bombay Chai Co.",
-    industry: "D2C Beverage",
-    contact_name: "Kabir Mehta",
-    email: "client@bombaychaico.com",
-    phone: "+91 98765 43210",
-    deal_stage: "WON",
-    deal_value: 75000,
-    retainer_amount: 75000,
-    health_score: 100,
-    last_activity_hours: 2,
-    is_decaying: false,
-  },
-];
+const initialDeals: DealCard[] = [];
 
 const stages: { key: DealStage; label: string; color: string }[] = [
   { key: "LEAD_CAPTURED", label: "Lead Captured", color: "bg-slate-500" },
@@ -216,30 +159,41 @@ export default function CRMPage() {
     else if (!selectedDealForProposal && dialog.open) dialog.close();
   }, [selectedDealForProposal]);
 
+  const DEMO_KEYWORDS = ["raw earth organics", "finpulse global", "urban vibe apparels", "bombay chai co."];
+  const isDemoDeal = (name?: string, id?: string) => {
+    if (!name) return false;
+    const lower = name.toLowerCase();
+    if (DEMO_KEYWORDS.some((kw) => lower.includes(kw))) return true;
+    if (id && (id === "d1" || id === "d2" || id === "d3" || id === "d4" || id.startsWith("deal_0"))) return true;
+    return false;
+  };
+
   const refreshDeals = async () => {
     try {
       const res = await api.get("/crm/deals");
-      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const remoteDeals = res.data.data.map((d: any) => ({
-          id: String(d.id),
-          company_name: d.company_name,
-          industry: d.industry,
-          contact_name: d.primary_contact_name || d.contact_name,
-          email: d.contact_email || d.email,
-          phone: d.contact_phone || d.phone || "+91 98000 00000",
-          deal_stage: (d.deal_stage || "LEAD_CAPTURED") as DealStage,
-          deal_value: d.deal_value || 100000,
-          retainer_amount: d.retainer_amount || 100000,
-          health_score: d.health_score || 100,
-          last_activity_hours: 0,
-          is_decaying: d.is_decaying || false,
-        }));
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        const remoteDeals = res.data.data
+          .filter((d: any) => !isDemoDeal(d.company_name, String(d.id)))
+          .map((d: any) => ({
+            id: String(d.id),
+            company_name: d.company_name,
+            industry: d.industry,
+            contact_name: d.primary_contact_name || d.contact_name,
+            email: d.contact_email || d.email,
+            phone: d.contact_phone || d.phone || "+91 98000 00000",
+            deal_stage: (d.deal_stage || "LEAD_CAPTURED") as DealStage,
+            deal_value: d.deal_value || 100000,
+            retainer_amount: d.retainer_amount || 100000,
+            health_score: d.health_score || 100,
+            last_activity_hours: 0,
+            is_decaying: d.is_decaying || false,
+          }));
         setDeals((prev) => {
           const remoteCompanyNames = new Set(remoteDeals.map((r: any) => r.company_name.toLowerCase()));
           const remoteIds = new Set(remoteDeals.map((r: any) => r.id));
-          const localOnly = prev.filter(
-            (p) => !remoteIds.has(p.id) && !remoteCompanyNames.has(p.company_name.toLowerCase())
-          );
+          const localOnly = prev
+            .filter((p) => !remoteIds.has(p.id) && !remoteCompanyNames.has(p.company_name.toLowerCase()))
+            .filter((p) => !isDemoDeal(p.company_name, p.id));
           const combined = [...localOnly, ...remoteDeals];
           try {
             localStorage.setItem("muchad_crm_deals", JSON.stringify(combined));
@@ -253,8 +207,9 @@ export default function CRMPage() {
         const cached = localStorage.getItem("muchad_crm_deals");
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setDeals(parsed);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((p: any) => !isDemoDeal(p.company_name, p.id));
+            setDeals(cleaned);
           }
         }
       } catch {}
@@ -266,12 +221,10 @@ export default function CRMPage() {
       const cached = localStorage.getItem("muchad_crm_deals");
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDeals((prev) => {
-            const parsedIds = new Set(parsed.map((p: any) => p.id));
-            const existingUnique = prev.filter((e) => !parsedIds.has(e.id));
-            return [...parsed, ...existingUnique];
-          });
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((p: any) => !isDemoDeal(p.company_name, p.id));
+          setDeals(cleaned);
+          localStorage.setItem("muchad_crm_deals", JSON.stringify(cleaned));
         }
       }
     } catch {}
@@ -635,7 +588,21 @@ export default function CRMPage() {
 
                 {/* Cards Container */}
                 <div className="p-2 space-y-2.5 min-h-[420px]">
-                  {colDeals.map((deal) => (
+                  {colDeals.length === 0 ? (
+                    <div className="h-32 border border-dashed border-slate-300/80 rounded-lg flex flex-col items-center justify-center p-3 text-center text-slate-400">
+                      <span className="text-[11px] font-medium text-slate-500">No deals in stage</span>
+                      <button
+                        onClick={() => {
+                          setNewStage(col.key);
+                          setIsNewDealModalOpen(true);
+                        }}
+                        className="mt-1 text-[10px] font-bold text-[#714B67] hover:underline"
+                      >
+                        + Add deal
+                      </button>
+                    </div>
+                  ) : (
+                    colDeals.map((deal) => (
                     <div
                       key={deal.id}
                       draggable
@@ -737,7 +704,7 @@ export default function CRMPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               </div>
             );
@@ -760,7 +727,22 @@ export default function CRMPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredDeals.map((deal) => (
+                {filteredDeals.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="max-w-xs mx-auto space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                          <Building2 size={20} />
+                        </div>
+                        <p className="font-semibold text-sm text-slate-700">No deals in pipeline</p>
+                        <p className="text-xs text-slate-400">
+                          Create a new opportunity or discover fresh leads using the AI Lead Radar.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDeals.map((deal) => (
                   <tr key={deal.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3 px-4">
                       <span className="font-bold text-slate-900 block">{deal.company_name}</span>
@@ -819,7 +801,7 @@ export default function CRMPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

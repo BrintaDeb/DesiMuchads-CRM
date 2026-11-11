@@ -193,18 +193,7 @@ async def seed_initial_agency_data():
                 permissions=get_default_permissions_for_role(UserRole.SPECIALIST, can_manage_automations=False, can_edit_projects=True, can_manage_billing=False),
                 is_active=True,
             )
-            client_user = User(
-                email="client@bombaychaico.com",
-                password_hash=hash_password("client123456"),
-                full_name="Kabir Mehta (Bombay Chai Co)",
-                role=UserRole.CLIENT,
-                department="External Client",
-                hourly_cost=0.0,
-                weekly_capacity_hours=0,
-                permissions=get_default_permissions_for_role(UserRole.CLIENT),
-                is_active=True,
-            )
-            session.add_all([admin_user, manager_user, specialist_user, client_user])
+            session.add_all([admin_user, manager_user, specialist_user])
             await session.flush()
 
             # 2. Workflow Blueprints
@@ -555,84 +544,7 @@ async def seed_initial_agency_data():
             ]
             session.add_all(bp6_steps)
 
-            # 3. Seed Sample Client & Project
-            client1 = Client(
-                company_name="Bombay Chai Co.",
-                industry="D2C Beverage",
-                primary_contact_name="Kabir Mehta",
-                contact_email="client@bombaychaico.com",
-                contact_phone="+91 98765 43210",
-                retainer_amount=75000.0,
-                billing_cycle_day=1,
-                gst_tax_id="27AABCB1234D1Z5",
-                health_score=95,
-                status=ClientStatus.ACTIVE,
-                deal_stage=DealStage.WON,
-                deal_value=75000.0,
-                account_manager_id=manager_user.id,
-            )
-            lead1 = Client(
-                company_name="Urban Vibe Apparels",
-                industry="E-Commerce Fashion",
-                primary_contact_name="Sneha Kapoor",
-                contact_email="sneha@urbanvibe.in",
-                contact_phone="+91 91234 56789",
-                retainer_amount=120000.0,
-                billing_cycle_day=5,
-                gst_tax_id="29XYZAB5678C1Z2",
-                health_score=100,
-                status=ClientStatus.LEAD,
-                deal_stage=DealStage.PROPOSAL_SENT,
-                deal_value=120000.0,
-                account_manager_id=manager_user.id,
-            )
-            session.add_all([client1, lead1])
-            await session.flush()
-
-            # Seed sample content item (clean, no demo project attached)
-            item1 = ContentCalendarItem(
-                client_id=client1.id,
-                project_id=None,
-                platform=ContentPlatform.INSTAGRAM,
-                content_type=ContentType.REEL,
-                title="Monsoon to Winter: The Ultimate Masala Chai Brew Guide",
-                caption_copy="There is nothing quite like a steaming cup of handmade kadak chai on a cold evening. Tap the link in bio to shop our freshly ground spices! ☕🍂 #BombayChai #ChaiLove",
-                media_urls=["https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80"],
-                scheduled_for=datetime.utcnow() + timedelta(days=3),
-                approval_status=ContentApprovalStatus.CLIENT_REVIEW,
-                version_number=1,
-            )
-            session.add(item1)
-
-            # Seed sample invoice
-            today = date.today()
-            inv1 = Invoice(
-                invoice_number=f"INV-{today.strftime('%Y%m')}-0001",
-                client_id=client1.id,
-                subtotal=75000.0,
-                tax_amount=13500.0,  # 18% GST
-                total_amount=88500.0,
-                currency="INR",
-                status=InvoiceStatus.PAID,
-                due_date=today + timedelta(days=7),
-                paid_at=datetime.utcnow(),
-            )
-            session.add(inv1)
-
-            # Seed calendar event
-            event1 = CalendarEvent(
-                title="Bombay Chai Co. Bi-Weekly Growth Sync",
-                event_type=CalendarEventType.MEETING,
-                start_time=datetime.utcnow() + timedelta(days=1, hours=4),
-                end_time=datetime.utcnow() + timedelta(days=1, hours=5),
-                client_id=client1.id,
-                created_by_id=admin_user.id,
-                attendees=["admin@desimuchads.com", "manager@desimuchads.com", "client@bombaychaico.com"],
-                meeting_link="https://meet.google.com/xyz-muchad-sync",
-            )
-            session.add(event1)
-
-            # Seed default automation rules if none exist
+            # 3. Seed default automation rules if none exist
             rule_check = await session.execute(select(AutomationRule))
             if not rule_check.scalars().first():
                 demo_rules = [
