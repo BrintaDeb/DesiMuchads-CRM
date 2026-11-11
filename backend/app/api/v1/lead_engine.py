@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_roles
+from app.core.security import get_current_user, require_roles, require_permission
 from app.models.models import User, Client, AutomationAuditLog
 from app.models.enums import UserRole, ClientStatus, DealStage
 from app.schemas.schemas import (
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/crm/lead-generator", tags=["Autonomous Area Lead Gen
 
 @router.get("/presets", response_model=ApiResponse[Dict[str, Any]])
 async def get_lead_generator_presets(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("leads:read")),
 ):
     """
     Returns pre-configured Indian metro business hubs and niche verticals
@@ -38,7 +38,7 @@ async def get_lead_generator_presets(
 @router.post("/discover", response_model=ApiResponse[List[DiscoveredLeadItem]])
 async def discover_leads_by_area(
     req: LeadDiscoveryRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("leads:read")),
 ):
     """
     Autonomous lead discovery engine based on city, area preference, and niche.
@@ -54,7 +54,7 @@ async def discover_leads_by_area(
 @router.post("/generate-pitch", response_model=ApiResponse[Dict[str, Any]])
 async def generate_custom_pitch(
     req: LeadOutreachGenerateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("leads:read")),
 ):
     """
     Generates a personalized cold email and WhatsApp sequence tailored for
@@ -73,7 +73,7 @@ async def generate_custom_pitch(
 @router.post("/inject-batch", response_model=ApiResponse[Dict[str, Any]])
 async def inject_leads_to_pipeline(
     req: LeadInjectBatchRequest,
-    current_user: User = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER])),
+    current_user: User = Depends(require_permission("leads:write")),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -163,7 +163,7 @@ async def inject_leads_to_pipeline(
 @router.post("/dispatch-outreach", response_model=ApiResponse[Dict[str, Any]])
 async def dispatch_cold_outreach(
     req: LeadDispatchBatchRequest,
-    current_user: User = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER])),
+    current_user: User = Depends(require_permission("leads:write")),
     db: AsyncSession = Depends(get_db),
 ):
     """

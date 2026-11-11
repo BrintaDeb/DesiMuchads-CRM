@@ -2,6 +2,7 @@ import pytest
 import uuid
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy import select
 
 from app.core.database import Base, get_db
 from app.main import app
@@ -201,5 +202,96 @@ async def test_specialized_genres_graphic_design_web_seo(super_admin_auth):
             assert len(leads[0]["audit_findings"]) > 0
             assert "https://api.whatsapp.com/send" in leads[0]["whatsapp_click_url"]
             assert "https://www.google.com/maps/search/" in leads[0]["google_maps_url"]
+
+
+@pytest.mark.asyncio
+async def test_lead_engine_permissions_and_role_access():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        spec_id = uuid.uuid4()
+        async with TestingSessionLocal() as session:
+            spec_user = User(
+                id=spec_id,
+                email=f"specialist_{spec_id.hex[:6]}@desimuchads.com",
+                password_hash=hash_password("spec_pass_123"),
+                full_name="Creative Specialist",
+                role=UserRole.SPECIALIST,
+                is_active=True,
+                permissions=["projects:read", "content:read"],
+            )
+            session.add(spec_user)
+            await session.commit()
+
+        spec_token = create_access_token(data={"sub": str(spec_id), "role": UserRole.SPECIALIST.value})
+
+        # Specialist without leads:write should get 403 on inject-batch
+        inject_denied = await ac.post(
+            "/api/v1/crm/lead-generator/inject-batch",
+            headers={"Authorization": f"Bearer {spec_token}"},
+            json={
+                "leads": [{
+                    "temp_id": "test_1",
+                    "company_name": "Test Denied Corp",
+                    "founder_name": "John Doe",
+                    "title": "CEO",
+                    "email": "john@test.com",
+                    "phone": "+91 98000 00000",
+                    "city": "Mumbai",
+                    "area": "Bandra",
+                    "locality": "Bandra",
+                    "niche": "Tech Startups, SaaS & AI Ventures",
+                    "deal_value": 80000.0,
+                    "intent_score": 90,
+                    "audit_findings": ["Test finding"],
+                    "recommended_service": "Tech ABM",
+                    "cold_email_subject": "Test",
+                    "cold_email_body": "Test",
+                    "cold_whatsapp_text": "Test",
+                    "whatsapp_click_url": "https://api.whatsapp.com",
+                }],
+                "stage": "LEAD_CAPTURED",
+            },
+        )
+        assert inject_denied.status_code == 403
+
+        # Grant leads:write to this specialist
+        async with TestingSessionLocal() as session:
+            stmt = select(User).where(User.id == spec_id)
+            res = await session.execute(stmt)
+            u = res.scalar_one()
+            u.permissions = ["projects:read", "content:read", "leads:read", "leads:write"]
+            await session.commit()
+
+        # Specialist WITH leads:write should succeed
+        inject_allowed = await ac.post(
+            "/api/v1/crm/lead-generator/inject-batch",
+            headers={"Authorization": f"Bearer {spec_token}"},
+            json={
+                "leads": [{
+                    "temp_id": "test_2",
+                    "company_name": "Test Allowed Corp",
+                    "founder_name": "Jane Doe",
+                    "title": "Founder",
+                    "email": "jane@test.com",
+                    "phone": "+91 98000 11111",
+                    "city": "Mumbai",
+                    "area": "Bandra",
+                    "locality": "Bandra",
+                    "niche": "Tech Startups, SaaS & AI Ventures",
+                    "deal_value": 90000.0,
+                    "intent_score": 95,
+                    "audit_findings": ["Test finding 2"],
+                    "recommended_service": "Tech ABM",
+                    "cold_email_subject": "Test 2",
+                    "cold_email_body": "Test 2",
+                    "cold_whatsapp_text": "Test 2",
+                    "whatsapp_click_url": "https://api.whatsapp.com",
+                }],
+                "stage": "LEAD_CAPTURED",
+            },
+        )
+        assert inject_allowed.status_code == 200
+        assert inject_allowed.json()["data"]["injected_count"] == 1
+
 
 

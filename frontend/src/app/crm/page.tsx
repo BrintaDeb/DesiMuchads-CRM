@@ -220,22 +220,28 @@ export default function CRMPage() {
     try {
       const res = await api.get("/crm/deals");
       if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        setDeals(
-          res.data.data.map((d: any) => ({
-            id: d.id,
-            company_name: d.company_name,
-            industry: d.industry,
-            contact_name: d.primary_contact_name,
-            email: d.contact_email,
-            phone: d.contact_phone || "+91 98000 00000",
-            deal_stage: d.deal_stage || "LEAD_CAPTURED",
-            deal_value: d.deal_value || 100000,
-            retainer_amount: d.retainer_amount || 100000,
-            health_score: d.health_score || 100,
-            last_activity_hours: 0,
-            is_decaying: d.is_decaying || false,
-          }))
-        );
+        const remoteDeals = res.data.data.map((d: any) => ({
+          id: String(d.id),
+          company_name: d.company_name,
+          industry: d.industry,
+          contact_name: d.primary_contact_name || d.contact_name,
+          email: d.contact_email || d.email,
+          phone: d.contact_phone || d.phone || "+91 98000 00000",
+          deal_stage: (d.deal_stage || "LEAD_CAPTURED") as DealStage,
+          deal_value: d.deal_value || 100000,
+          retainer_amount: d.retainer_amount || 100000,
+          health_score: d.health_score || 100,
+          last_activity_hours: 0,
+          is_decaying: d.is_decaying || false,
+        }));
+        setDeals((prev) => {
+          const remoteCompanyNames = new Set(remoteDeals.map((r: any) => r.company_name.toLowerCase()));
+          const remoteIds = new Set(remoteDeals.map((r: any) => r.id));
+          const localOnly = prev.filter(
+            (p) => !remoteIds.has(p.id) && !remoteCompanyNames.has(p.company_name.toLowerCase())
+          );
+          return [...localOnly, ...remoteDeals];
+        });
       }
     } catch {}
   };
@@ -243,10 +249,11 @@ export default function CRMPage() {
   useEffect(() => {
     refreshDeals();
     const handleInjected = (e: any) => {
+      let incomingDeals: any[] = [];
       if (e.detail?.deals && e.detail.deals.length > 0) {
-        setDeals((prev) => [...e.detail.deals, ...prev]);
+        incomingDeals = e.detail.deals;
       } else if (e.detail?.leads && e.detail.leads.length > 0) {
-        const converted = e.detail.leads.map((l: any) => ({
+        incomingDeals = e.detail.leads.map((l: any) => ({
           id: l.temp_id || `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           company_name: l.company_name,
           industry: l.niche,
@@ -260,7 +267,13 @@ export default function CRMPage() {
           last_activity_hours: 0,
           is_decaying: false,
         }));
-        setDeals((prev) => [...converted, ...prev]);
+      }
+      if (incomingDeals.length > 0) {
+        setDeals((prev) => {
+          const existingNames = new Set(prev.map((d) => d.company_name.toLowerCase()));
+          const newUnique = incomingDeals.filter((d) => !existingNames.has(d.company_name.toLowerCase()));
+          return [...newUnique, ...prev];
+        });
       }
       refreshDeals();
     };

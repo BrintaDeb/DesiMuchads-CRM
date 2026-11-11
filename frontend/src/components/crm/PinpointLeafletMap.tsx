@@ -17,7 +17,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
-import { DiscoveredLead } from "./LeadGeneratorModal";
+import { DiscoveredLead } from "@/types";
 
 interface PinpointLeafletMapProps {
   centerLat: number;

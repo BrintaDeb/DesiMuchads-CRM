@@ -82,3 +82,4 @@ def setup_test_db():
 def reset_rate_limiter():
     with auth_rate_limiter._lock:
         auth_rate_limiter._failures.clear()
+

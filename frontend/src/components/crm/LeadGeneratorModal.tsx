@@ -53,67 +53,13 @@ const PinpointLeafletMap = dynamic(() => import("./PinpointLeafletMap"), {
   ),
 });
 
-export interface DiscoveredLead {
-  temp_id: string;
-  company_name: string;
-  founder_name: string;
-  title: string;
-  email: string;
-  phone: string;
-  city: string;
-  area: string;
-  locality: string;
-  public_landmark?: string;
-  nearby_landmark?: string;
-  google_maps_url?: string;
-  google_maps_place_id?: string;
-  google_rating?: number;
-  review_count?: number;
-  google_3pack_status?: string;
-  niche: string;
-  deal_value: number;
-  intent_score: number;
-  lead_temperature?: string;
-  audit_findings: string[];
-  buying_triggers?: string[];
-  buyer_persona?: string;
-  annual_revenue_band?: string;
-  employee_count_band?: string;
-  website_url?: string;
-  website_speed_status?: string;
-  tech_stack?: string[];
-  recommended_service: string;
-  latitude?: number;
-  longitude?: number;
-  distance_km?: number;
-  distance_label?: string;
-  pinpoint_address?: string;
-  linkedin_url?: string;
-  cold_email_subject: string;
-  cold_email_body: string;
-  cold_whatsapp_text: string;
-  whatsapp_click_url: string;
-  cold_phone_call_script?: string;
-}
+import { DiscoveredLead, AreaDetail, RegionPreset } from "@/types";
+export type { DiscoveredLead, AreaDetail, RegionPreset };
 
 interface LeadGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLeadsInjected: () => void;
-}
-
-interface AreaDetail {
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-interface RegionPreset {
-  city: string;
-  lat?: number;
-  lng?: number;
-  areas: string[];
-  area_details?: AreaDetail[];
 }
 
 const FALLBACK_REGIONS: RegionPreset[] = [
