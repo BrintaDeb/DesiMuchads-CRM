@@ -742,6 +742,13 @@ class DiscoveredLeadItem(BaseModel):
     cold_whatsapp_text: str
     whatsapp_click_url: str
     cold_phone_call_script: Optional[str] = None
+    google_maps_directions_url: Optional[str] = None
+    is_bookmarked: Optional[bool] = False
+    call_status: Optional[str] = "NOT_CALLED"
+    call_notes: Optional[str] = None
+    last_called_at: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class LeadDiscoveryRequest(BaseModel):
@@ -756,6 +763,8 @@ class LeadDiscoveryRequest(BaseModel):
     pinpoint_landmark: Optional[str] = None
     lead_temperature_filter: Optional[str] = "ALL"  # "ALL", "HOT_BUYER", "WARM_PROSPECT"
 
+    model_config = ConfigDict(extra="ignore")
+
 
 class LeadOutreachGenerateRequest(BaseModel):
     company_name: str
@@ -765,17 +774,23 @@ class LeadOutreachGenerateRequest(BaseModel):
     area: str
     primary_pain_point: Optional[str] = None
 
+    model_config = ConfigDict(extra="ignore")
+
 
 class LeadInjectBatchRequest(BaseModel):
     leads: List[DiscoveredLeadItem]
     stage: DealStage = DealStage.LEAD_CAPTURED
     auto_dispatch_first_touch: bool = False
 
+    model_config = ConfigDict(extra="ignore")
+
 
 class LeadDispatchBatchRequest(BaseModel):
     lead_ids: Optional[List[str]] = None
     leads: Optional[List[DiscoveredLeadItem]] = None
     channel: str = "ALL"  # "EMAIL", "WHATSAPP", "ALL"
+
+    model_config = ConfigDict(extra="ignore")
 
 
 # ==============================================================================

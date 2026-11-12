@@ -406,6 +406,31 @@ export function LeadGeneratorModal({ isOpen, onClose, onLeadsInjected }: LeadGen
       }
 
       if (typeof window !== "undefined") {
+        try {
+          const cached = localStorage.getItem("muchad_crm_deals");
+          const existing = cached ? JSON.parse(cached) : [];
+          const newDeals = leadsToInject.map((l) => ({
+            id: l.temp_id || `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            company_name: l.company_name,
+            industry: l.niche,
+            contact_name: l.founder_name,
+            email: l.email,
+            phone: l.phone,
+            deal_stage: "LEAD_CAPTURED",
+            deal_value: l.deal_value,
+            retainer_amount: l.deal_value,
+            health_score: l.intent_score,
+            last_activity_hours: 0,
+            is_decaying: false,
+          }));
+          const existingNames = new Set(existing.map((d: any) => d.company_name?.toLowerCase()));
+          const merged = [
+            ...newDeals.filter((d: any) => !existingNames.has(d.company_name?.toLowerCase())),
+            ...existing,
+          ];
+          localStorage.setItem("muchad_crm_deals", JSON.stringify(merged));
+        } catch {}
+
         window.dispatchEvent(new CustomEvent("muchad:leads_injected", { detail: { leads: leadsToInject } }));
       }
 

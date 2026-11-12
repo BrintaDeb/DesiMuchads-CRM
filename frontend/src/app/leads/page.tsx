@@ -105,6 +105,7 @@ export default function MobileLeadRadarPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tempFilter, setTempFilter] = useState("ALL");
   const [mobileTab, setMobileTab] = useState<"map" | "leads" | "saved" | "logs">("leads");
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Leads & Selection
   const [discoveredLeads, setDiscoveredLeads] = useState<DiscoveredLead[]>([]);
@@ -124,9 +125,19 @@ export default function MobileLeadRadarPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isInjecting, setIsInjecting] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [mapInvalidateSignal, setMapInvalidateSignal] = useState(0);
   const [regions, setRegions] = useState<RegionPreset[]>(FALLBACK_REGIONS);
   const [niches, setNiches] = useState<string[]>(FALLBACK_NICHES);
+
+  // Active City and Available Areas helper
+  const currentCityObj = useMemo(() => {
+    return regions.find((r) => r.city === selectedCity) || regions[0] || FALLBACK_REGIONS[0];
+  }, [regions, selectedCity]);
+
+  const availableAreas = useMemo(() => {
+    return currentCityObj?.areas || [];
+  }, [currentCityObj]);
 
   // 1. Load LocalStorage Caches (Offline Resilience)
   useEffect(() => {
@@ -168,9 +179,14 @@ export default function MobileLeadRadarPage() {
     fetchPresets();
   }, []);
 
-  // 3. Trigger initial discovery if empty
+  // 3. Trigger initial discovery ONLY if cache is completely empty
   useEffect(() => {
-    if (discoveredLeads.length === 0) {
+    try {
+      const cached = localStorage.getItem("muchad_mobile_leads_cache");
+      if (!cached || JSON.parse(cached).length === 0) {
+        handleDiscover();
+      }
+    } catch {
       handleDiscover();
     }
   }, []);
@@ -188,21 +204,44 @@ export default function MobileLeadRadarPage() {
     }
   }, [mobileTab]);
 
-  // Sync coordinates when City / Area selection changes
-  useEffect(() => {
-    if (isCustomMode) return;
-    const cityObj = regions.find((r) => r.city === selectedCity);
-    if (cityObj?.areas?.length) {
-      const match = cityObj.area_details?.find((a) => a.name === selectedArea);
-      if (match) {
-        setCenterLat(match.lat);
-        setCenterLng(match.lng);
-      } else if (cityObj.lat && cityObj.lng) {
-        setCenterLat(cityObj.lat);
-        setCenterLng(cityObj.lng);
-      }
+  // Sync available area and coordinates when City changes
+  const handleCityChange = (newCity: string) => {
+    setSelectedCity(newCity);
+    setIsCustomMode(false);
+    setPinpointLandmark("");
+    const cityMatch = regions.find((r) => r.city === newCity) || regions[0];
+    if (cityMatch?.areas?.length) {
+      const newArea = cityMatch.areas[0];
+      setSelectedArea(newArea);
+      const areaMatch = cityMatch.area_details?.find((a) => a.name === newArea);
+      const lat = areaMatch?.lat || cityMatch.lat || 18.9284;
+      const lng = areaMatch?.lng || cityMatch.lng || 72.8282;
+      setCenterLat(lat);
+      setCenterLng(lng);
+      triggerDiscoveryForCoords(lat, lng, newCity, newArea, selectedNiche);
     }
-  }, [selectedCity, selectedArea, regions, isCustomMode]);
+  };
+
+  // Sync coordinates when Area changes
+  const handleAreaChange = (newArea: string) => {
+    setSelectedArea(newArea);
+    setIsCustomMode(false);
+    setPinpointLandmark("");
+    const areaMatch = currentCityObj?.area_details?.find((a) => a.name === newArea);
+    if (areaMatch) {
+      setCenterLat(areaMatch.lat);
+      setCenterLng(areaMatch.lng);
+      triggerDiscoveryForCoords(areaMatch.lat, areaMatch.lng, selectedCity, newArea, selectedNiche);
+    } else {
+      triggerDiscoveryForCoords(centerLat, centerLng, selectedCity, newArea, selectedNiche);
+    }
+  };
+
+  // Sync when Niche changes
+  const handleNicheChange = (newNiche: string) => {
+    setSelectedNiche(newNiche);
+    triggerDiscoveryForCoords(centerLat, centerLng, selectedCity, selectedArea, newNiche);
+  };
 
   // 4. GPS "Near Me" Live Geolocation with Instant Smart Snap
   const handleGpsNearMe = () => {
@@ -245,7 +284,7 @@ export default function MobileLeadRadarPage() {
         setIsLocating(false);
 
         // Auto-run discovery for the newly locked coordinates
-        triggerDiscoveryForCoords(lat, lng, nearest.city, nearest.area);
+        triggerDiscoveryForCoords(lat, lng, nearest.city, nearest.area, selectedNiche);
       },
       (err) => {
         setIsLocating(false);
@@ -259,13 +298,59 @@ export default function MobileLeadRadarPage() {
     );
   };
 
-  // 5. Execute Lead Discovery
-  const triggerDiscoveryForCoords = async (lat: number, lng: number, city: string, area: string) => {
+  // 5. Geocode any custom street or landmark search
+  const handleGeocodeSearch = async (queryToSearch?: string) => {
+    const q = (queryToSearch || searchQuery).trim();
+    if (!q) {
+      toast.error("Please enter a street, landmark, or city name.");
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const item = data[0];
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        setCenterLat(lat);
+        setCenterLng(lng);
+        const parts = item.display_name.split(",");
+        const cleanName = parts.slice(0, 2).join(",").trim();
+        setPinpointLandmark(cleanName);
+        setIsCustomMode(true);
+        setCustomArea(parts[0]?.trim() || q);
+        setCustomCity(parts.slice(-3, -2)[0]?.trim() || "Commercial District");
+        toast.success(`📍 Located: ${cleanName}`);
+        triggerDiscoveryForCoords(lat, lng, selectedCity, parts[0]?.trim() || q, selectedNiche);
+      } else {
+        toast.error(`Could not locate "${q}". Try typing a nearby street or city.`);
+      }
+    } catch {
+      toast.error("Geocoding service unavailable. You can tap the map directly.");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // 6. Execute Lead Discovery
+  const triggerDiscoveryForCoords = async (
+    lat: number,
+    lng: number,
+    city: string,
+    area: string,
+    niche?: string
+  ) => {
     setIsLoading(true);
+    const activeNiche = niche || selectedNiche;
     const payload = {
       city: city || selectedCity,
       area: area || selectedArea,
-      niche: selectedNiche,
+      niche: activeNiche,
       target_count: targetCount,
       min_deal_value: minDealValue,
       radius_km: radiusKm,
@@ -315,7 +400,7 @@ export default function MobileLeadRadarPage() {
   const handleDiscover = () => {
     const finalCity = isCustomMode ? customCity.trim() || "Local Metro" : selectedCity;
     const finalArea = isCustomMode ? customArea.trim() || "Commercial District" : selectedArea;
-    triggerDiscoveryForCoords(centerLat, centerLng, finalCity, finalArea);
+    triggerDiscoveryForCoords(centerLat, centerLng, finalCity, finalArea, selectedNiche);
   };
 
   // Toggle Bookmark
@@ -423,6 +508,21 @@ export default function MobileLeadRadarPage() {
     }
 
     setIsInjecting(true);
+    const newDeals = leadsToInject.map((l) => ({
+      id: l.temp_id || `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      company_name: l.company_name,
+      industry: l.niche,
+      contact_name: l.founder_name,
+      email: l.email,
+      phone: l.phone,
+      deal_stage: "LEAD_CAPTURED",
+      deal_value: l.deal_value,
+      retainer_amount: l.deal_value,
+      health_score: l.intent_score,
+      last_activity_hours: 0,
+      is_decaying: false,
+    }));
+
     try {
       await api.post("/crm/lead-generator/inject-batch", {
         leads: leadsToInject,
@@ -439,31 +539,24 @@ export default function MobileLeadRadarPage() {
       } else {
         toast.success(`Injected ${leadsToInject.length} leads into CRM Pipeline!`);
       }
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("muchad:leads_injected", { detail: { leads: leadsToInject } }));
-      }
     } catch {
-      // Offline fallback
-      const deals = leadsToInject.map((l) => ({
-        id: `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        company_name: l.company_name,
-        industry: l.niche,
-        contact_name: l.founder_name,
-        email: l.email,
-        phone: l.phone,
-        deal_stage: "LEAD_CAPTURED",
-        deal_value: l.deal_value,
-        retainer_amount: l.deal_value,
-        health_score: l.intent_score,
-        last_activity_hours: 0,
-        is_decaying: false,
-      }));
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("muchad:leads_injected", { detail: { deals } }));
-      }
-      toast.success(`Saved ${deals.length} deals into offline CRM Pipeline!`);
+      toast.success(`Saved ${newDeals.length} deals into offline CRM Pipeline!`);
     } finally {
+      // Sync locally to localStorage so CRM immediately displays them
+      if (typeof window !== "undefined") {
+        try {
+          const cachedCrmDeals = localStorage.getItem("muchad_crm_deals");
+          const existing = cachedCrmDeals ? JSON.parse(cachedCrmDeals) : [];
+          const existingNames = new Set(existing.map((d: any) => d.company_name?.toLowerCase()));
+          const merged = [
+            ...newDeals.filter((d: any) => !existingNames.has(d.company_name?.toLowerCase())),
+            ...existing,
+          ];
+          localStorage.setItem("muchad_crm_deals", JSON.stringify(merged));
+        } catch { }
+
+        window.dispatchEvent(new CustomEvent("muchad:leads_injected", { detail: { deals: newDeals, leads: leadsToInject } }));
+      }
       setIsInjecting(false);
     }
   };
@@ -519,12 +612,12 @@ export default function MobileLeadRadarPage() {
                 </h1>
               </div>
               <p className="text-[10px] text-slate-400 truncate max-w-[200px] sm:max-w-xs">
-                {selectedCity} • {pinpointLandmark || selectedArea}
+                {selectedCity} • {pinpointLandmark || selectedArea.split("(")[0].trim()}
               </p>
             </div>
           </div>
 
-          {/* GPS Quick Action */}
+          {/* GPS Quick Action & Tune Radar */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleGpsNearMe}
@@ -537,7 +630,16 @@ export default function MobileLeadRadarPage() {
               )}
             >
               <Compass className={cn("w-3.5 h-3.5", isLocating && "animate-spin text-amber-300")} />
-              <span className="text-[11px] font-bold">{isLocating ? "Locking..." : "Near Me (GPS)"}</span>
+              <span className="text-[11px] font-bold">{isLocating ? "Locking..." : "GPS Lock"}</span>
+            </button>
+
+            <button
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg bg-[#714B67] hover:bg-[#5E3E55] text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition"
+              title="Configure Radar Parameters"
+            >
+              <Filter size={13} />
+              <span className="text-[11px]">Tune</span>
             </button>
 
             <button
@@ -555,25 +657,42 @@ export default function MobileLeadRadarPage() {
       {/* 2. Top Controls & Radar Filter Bar */}
       <div className="bg-slate-900/70 border-b border-slate-800/80 px-3 py-2 space-y-2">
         <div className="max-w-5xl mx-auto space-y-2">
-          {/* Search Input & Radius Pill */}
+          {/* Search Input with Instant Geocoder */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search business, founder, street..."
+                placeholder="Search business, street, or landmark (Press Enter)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#714B67]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleGeocodeSearch();
+                  }
+                }}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-12 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#714B67]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-7 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
                 >
                   <X size={12} />
                 </button>
               )}
+              <button
+                onClick={() => handleGeocodeSearch()}
+                disabled={isGeocoding}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-amber-400"
+                title="Locate on map"
+              >
+                {isGeocoding ? (
+                  <RefreshCw size={12} className="animate-spin text-amber-400" />
+                ) : (
+                  <ArrowLeft size={12} className="rotate-180 text-slate-400" />
+                )}
+              </button>
             </div>
 
             {/* Radius Selector */}
@@ -584,6 +703,7 @@ export default function MobileLeadRadarPage() {
                   onClick={() => {
                     setRadiusKm(r);
                     setMapInvalidateSignal((prev) => prev + 1);
+                    triggerDiscoveryForCoords(centerLat, centerLng, selectedCity, selectedArea, selectedNiche);
                   }}
                   className={cn(
                     "px-2 py-1 text-[10px] font-bold rounded-md transition",
@@ -595,6 +715,47 @@ export default function MobileLeadRadarPage() {
                   {r}km
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Quick Area & Niche One-Tap Dropdowns */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* Area Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedArea}
+                onChange={(e) => handleAreaChange(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold appearance-none focus:outline-none focus:border-[#714B67] truncate pr-6"
+              >
+                {availableAreas.map((areaName) => (
+                  <option key={areaName} value={areaName} className="bg-slate-900 text-white">
+                    📍 {areaName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={13}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+            </div>
+
+            {/* Niche Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedNiche}
+                onChange={(e) => handleNicheChange(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold appearance-none focus:outline-none focus:border-[#714B67] truncate pr-6"
+              >
+                {niches.map((n) => (
+                  <option key={n} value={n} className="bg-slate-900 text-white">
+                    🎯 {n}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={13}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
             </div>
           </div>
 
@@ -639,21 +800,18 @@ export default function MobileLeadRadarPage() {
 
             {/* City Quick Switcher */}
             <div className="border-l border-slate-800 pl-1.5 flex items-center gap-1">
-              {["Mumbai", "Bengaluru", "Delhi NCR", "Hyderabad", "Pune"].map((city) => (
+              {regions.map((reg) => (
                 <button
-                  key={city}
-                  onClick={() => {
-                    setSelectedCity(city);
-                    setIsCustomMode(false);
-                  }}
+                  key={reg.city}
+                  onClick={() => handleCityChange(reg.city)}
                   className={cn(
                     "px-2 py-0.5 rounded-md whitespace-nowrap text-[10px] font-medium transition",
-                    selectedCity === city && !isCustomMode
+                    selectedCity === reg.city && !isCustomMode
                       ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 font-bold"
                       : "bg-slate-800/60 text-slate-400 hover:text-slate-200"
                   )}
                 >
-                  {city.split(" ")[0]}
+                  {reg.city.split(" ")[0]}
                 </button>
               ))}
             </div>
@@ -662,7 +820,7 @@ export default function MobileLeadRadarPage() {
       </div>
 
       {/* 3. Mobile View Mode Segmented Bar */}
-      <div className="sticky top-[93px] z-20 bg-slate-950 border-b border-slate-800 px-3 py-1.5">
+      <div className="sticky top-[125px] z-20 bg-slate-950 border-b border-slate-800 px-3 py-1.5">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-1">
           <div className="grid grid-cols-4 gap-1 w-full bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button
@@ -761,7 +919,7 @@ export default function MobileLeadRadarPage() {
                 <Target className="w-8 h-8 text-slate-500 mx-auto" />
                 <p className="text-sm font-semibold text-slate-300">No leads match this filter</p>
                 <p className="text-xs text-slate-500">
-                  Try tapping "Near Me (GPS)" or expanding your search radius to 10km.
+                  Try tapping "GPS Lock" or expanding your search radius.
                 </p>
                 <button
                   onClick={handleGpsNearMe}
@@ -1040,10 +1198,10 @@ export default function MobileLeadRadarPage() {
           </div>
         )}
 
-        {/* TAB 2: INTERACTIVE LEAFLET RADAR MAP */}
+        {/* TAB 2: GEOSPATIAL MAP RADAR */}
         {mobileTab === "map" && (
           <div className="space-y-3">
-            <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-xl bg-slate-900">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-1 overflow-hidden shadow-xl">
               <PinpointLeafletMap
                 centerLat={centerLat}
                 centerLng={centerLng}
@@ -1058,6 +1216,7 @@ export default function MobileLeadRadarPage() {
                   setCenterLat(lat);
                   setCenterLng(lng);
                   if (name) setPinpointLandmark(name);
+                  triggerDiscoveryForCoords(lat, lng, selectedCity, name || selectedArea, selectedNiche);
                 }}
                 isLocating={isLocating}
                 onLocateMe={handleGpsNearMe}
@@ -1182,7 +1341,7 @@ export default function MobileLeadRadarPage() {
                 <Clock className="w-8 h-8 text-slate-500 mx-auto" />
                 <p className="text-sm font-semibold text-slate-300">No field calls logged today</p>
                 <p className="text-xs text-slate-500">
-                  When you tap "Call" on any lead, a quick logger will record your conversation outcome.
+                  Tap "Call" on any lead card to automatically prompt the call result logger.
                 </p>
               </div>
             ) : (
@@ -1190,30 +1349,28 @@ export default function MobileLeadRadarPage() {
                 {callLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs space-y-1.5"
+                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-start justify-between gap-2"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white">{log.company_name}</span>
-                      <span className="font-mono text-[10px] text-slate-400">{log.timestamp}</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{log.company_name}</h4>
+                      <p className="text-[11px] text-slate-400">
+                        {log.contact_name} • {log.phone}
+                      </p>
+                      {log.note && <p className="text-xs text-slate-300 mt-1 italic">"{log.note}"</p>}
                     </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">
-                        {log.contact_name} ({log.phone})
-                      </span>
+                    <div className="text-right shrink-0">
                       <span
                         className={cn(
-                          "px-2 py-0.5 rounded-full font-bold text-[10px]",
-                          log.outcome === "INTERESTED"
+                          "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                          log.outcome === "INTERESTED" || log.outcome === "MEETING_SET"
                             ? "bg-emerald-500/20 text-emerald-300"
-                            : log.outcome === "MEETING_SET"
-                              ? "bg-purple-500/20 text-purple-300"
-                              : "bg-slate-800 text-slate-400"
+                            : "bg-slate-800 text-slate-400"
                         )}
                       >
                         {log.outcome}
                       </span>
+                      <p className="text-[10px] text-slate-500 mt-1">{log.timestamp}</p>
                     </div>
-                    {log.note && <p className="text-slate-300 bg-slate-950 p-2 rounded-lg">{log.note}</p>}
                   </div>
                 ))}
               </div>
@@ -1322,7 +1479,183 @@ export default function MobileLeadRadarPage() {
           </div>
         </div>
       )}
+
+      {/* 7. Comprehensive Radar Tuning Bottom-Sheet Drawer */}
+      {isFilterDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center p-0">
+          <div className="w-full max-w-lg bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom pb-8">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-[#714B67] text-white">
+                  <Sliders size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Radar Tuning & Area Filter</h3>
+                  <p className="text-[11px] text-slate-400">Configure geospatial target parameters</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* City Selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Metro Hub / Region</label>
+              <div className="grid grid-cols-3 gap-1.5 text-xs">
+                {regions.map((reg) => (
+                  <button
+                    key={reg.city}
+                    onClick={() => handleCityChange(reg.city)}
+                    className={cn(
+                      "py-2 px-1 rounded-xl text-xs font-semibold transition text-center truncate",
+                      selectedCity === reg.city && !isCustomMode
+                        ? "bg-[#714B67] text-white shadow-xs"
+                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200"
+                    )}
+                  >
+                    {reg.city}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Area Selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">
+                Commercial Micro-Market ({selectedCity})
+              </label>
+              <select
+                value={selectedArea}
+                onChange={(e) => handleAreaChange(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white font-medium focus:outline-none focus:border-[#714B67]"
+              >
+                {availableAreas.map((a) => (
+                  <option key={a} value={a} className="bg-slate-900 text-white">
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Service Niche */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Agency Service Niche</label>
+              <select
+                value={selectedNiche}
+                onChange={(e) => setSelectedNiche(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white font-medium focus:outline-none focus:border-[#714B67]"
+              >
+                {niches.map((n) => (
+                  <option key={n} value={n} className="bg-slate-900 text-white">
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Target Count & Minimum Deal Value */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Target Leads</label>
+                <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                  {[4, 6, 8, 12].map((cnt) => (
+                    <button
+                      key={cnt}
+                      onClick={() => setTargetCount(cnt)}
+                      className={cn(
+                        "flex-1 py-1 text-xs font-bold rounded-lg transition",
+                        targetCount === cnt
+                          ? "bg-[#714B67] text-white"
+                          : "text-slate-400 hover:text-white"
+                      )}
+                    >
+                      {cnt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Min. Retainer</label>
+                <select
+                  value={minDealValue}
+                  onChange={(e) => setMinDealValue(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white font-medium focus:outline-none focus:border-[#714B67]"
+                >
+                  <option value={50000}>₹50,000 / mo</option>
+                  <option value={75000}>₹75,000 / mo</option>
+                  <option value={100000}>₹1,00,000 / mo</option>
+                  <option value={150000}>₹1,50,000 / mo</option>
+                  <option value={200000}>₹2,00,000 / mo</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Radar Radius */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                <span>Search Radius</span>
+                <span className="font-mono text-amber-400 font-bold">{radiusKm} km</span>
+              </label>
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                {[1, 3, 5, 10, 25].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRadiusKm(r)}
+                    className={cn(
+                      "flex-1 py-1.5 text-xs font-bold rounded-lg transition",
+                      radiusKm === r
+                        ? "bg-[#714B67] text-white"
+                        : "text-slate-400 hover:text-white"
+                    )}
+                  >
+                    {r}km
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Street / Landmark Geocode */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Pinpoint Landmark / Street</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Assagao Goa, Phoenix Palladium, ITPL..."
+                  value={pinpointLandmark}
+                  onChange={(e) => setPinpointLandmark(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#714B67]"
+                />
+                <button
+                  onClick={() => handleGeocodeSearch(pinpointLandmark)}
+                  disabled={isGeocoding || !pinpointLandmark.trim()}
+                  className="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 disabled:opacity-40"
+                >
+                  Locate
+                </button>
+              </div>
+            </div>
+
+            {/* Apply & Scan CTA */}
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setIsFilterDrawerOpen(false);
+                  handleDiscover();
+                }}
+                className="w-full py-3 bg-[#714B67] hover:bg-[#5E3E55] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+              >
+                <Compass size={15} className="animate-spin" />
+                <span>Apply Parameters & Scan Leads</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

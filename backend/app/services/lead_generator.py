@@ -982,6 +982,9 @@ class LeadGeneratorService:
                     cold_whatsapp_text=wa_text,
                     whatsapp_click_url=whatsapp_click_url,
                     cold_phone_call_script=cold_phone_call_script,
+                    google_maps_directions_url=f"https://www.google.com/maps/dir/?api=1&destination={lead_lat},{lead_lng}",
+                    is_bookmarked=False,
+                    call_status="NOT_CALLED",
                 )
             )
 
