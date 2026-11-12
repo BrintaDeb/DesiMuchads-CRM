@@ -40,7 +40,12 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { generateLocalLeads, findNearestHub } from "@/lib/leadGeneratorEngine";
+import {
+  generateLocalLeads,
+  findNearestHub,
+  FALLBACK_REGIONS,
+  FALLBACK_NICHES,
+} from "@/lib/leadGeneratorEngine";
 import Link from "next/link";
 
 // Dynamically import Leaflet Map to avoid SSR errors
@@ -62,110 +67,6 @@ interface LeadGeneratorModalProps {
   onClose: () => void;
   onLeadsInjected: () => void;
 }
-
-const FALLBACK_REGIONS: RegionPreset[] = [
-  {
-    city: "Mumbai",
-    lat: 18.9284,
-    lng: 72.8282,
-    areas: [
-      "South Mumbai (Nariman Point & Fort)",
-      "BKC (Bandra Kurla Complex)",
-      "Bandra West & Pali Hill",
-      "Lower Parel (Kamala Mills)",
-      "Andheri West (Lokhandwala & Oshiwara)",
-      "Powai (Hiranandani Gardens)",
-      "Juhu & Vile Parle",
-    ],
-  },
-  {
-    city: "Bengaluru",
-    lat: 12.9716,
-    lng: 77.5946,
-    areas: [
-      "Indiranagar (100ft Rd & 12th Main)",
-      "Koramangala (4th & 5th Block)",
-      "HSR Layout (27th Main)",
-      "Whitefield & ITPL",
-      "Lavelle Road & UB City",
-      "Jayanagar & JP Nagar",
-    ],
-  },
-  {
-    city: "Delhi NCR",
-    lat: 28.6139,
-    lng: 77.209,
-    areas: [
-      "CyberHub & Golf Course Rd (Gurugram)",
-      "Connaught Place & Barakhamba (Delhi)",
-      "South Extension & Greater Kailash (Delhi)",
-      "Sector 62 & 18 (Noida)",
-    ],
-  },
-  {
-    city: "Hyderabad",
-    lat: 17.385,
-    lng: 78.4867,
-    areas: [
-      "Jubilee Hills (Road 36 & 45)",
-      "Banjara Hills",
-      "Hitec City & Madhapur",
-      "Financial District (Gachibowli)",
-    ],
-  },
-  {
-    city: "Pune",
-    lat: 18.5204,
-    lng: 73.8567,
-    areas: [
-      "Koregaon Park & Kalyani Nagar",
-      "Balewadi High Street & Baner",
-      "Viman Nagar & Magarpatta",
-    ],
-  },
-  {
-    city: "Ahmedabad",
-    lat: 23.0225,
-    lng: 72.5714,
-    areas: [
-      "SG Highway & Thaltej",
-      "Sindhu Bhavan Road (SBR)",
-      "Prahlad Nagar & Satellite",
-    ],
-  },
-  {
-    city: "Goa",
-    lat: 15.2993,
-    lng: 74.124,
-    areas: [
-      "Assagao, Anjuna & Vagator",
-      "Panjim & Miramar",
-    ],
-  },
-  {
-    city: "International Hubs",
-    lat: 25.2048,
-    lng: 55.2708,
-    areas: [
-      "Dubai Marina & JLT (UAE)",
-      "DIFC (Dubai Financial Centre)",
-      "London (Mayfair & Soho)",
-      "Singapore (Marina Bay & Orchard)",
-    ],
-  },
-];
-
-const FALLBACK_NICHES = [
-  "Graphic Designing & Brand Identity",
-  "Website Development & Web Apps",
-  "Search Engine Optimization (SEO) & Google 3-Pack",
-  "D2C Brands & Consumer Goods",
-  "Real Estate & Luxury Living",
-  "Fine Dining, Cafes & Luxury Hospitality",
-  "Aesthetic Clinics, Dermatology & Healthcare",
-  "Tech Startups, SaaS & AI Ventures",
-  "Luxury Retail & Designer Fashion",
-];
 
 const HOTSPOT_SHORTCUTS = [
   { label: "Bandra West", lat: 19.0596, lng: 72.8295, city: "Mumbai", area: "Bandra West & Pali Hill" },

@@ -3,21 +3,14 @@ import axios from "axios";
 export const getApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    if (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      /^192\.168\./.test(hostname) ||
-      /^10\./.test(hostname) ||
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
-      hostname.endsWith(".local")
-    ) {
-      return `http://${hostname}:8000/api/v1`;
-    }
-    // On Vercel or remote deployment, route through Next.js API routes / rewrites
+    // In browser client, always route requests via same-origin relative path "/api/v1".
+    // Next.js handles server-side proxying and serverless fallback seamlessly.
+    // This eliminates CORS issues and port 8000 Windows Firewall blocks on mobile devices,
+    // and ensures 100% reliable functionality when hosted on Vercel or accessed via mobile LAN.
     return "/api/v1";
   }
-  return "http://localhost:8000/api/v1";
+  // Server-side (SSR / RSC)
+  return process.env.BACKEND_URL || "http://127.0.0.1:8000/api/v1";
 };
 
 export const api = axios.create({

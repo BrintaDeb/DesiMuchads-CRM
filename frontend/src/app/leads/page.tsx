@@ -53,6 +53,8 @@ import {
   findNearestHub,
   METRO_COORDINATES,
   HOTSPOT_COORDINATES,
+  FALLBACK_REGIONS,
+  FALLBACK_NICHES,
 } from "@/lib/leadGeneratorEngine";
 import { DiscoveredLead, RegionPreset } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
@@ -123,8 +125,8 @@ export default function MobileLeadRadarPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [isInjecting, setIsInjecting] = useState(false);
   const [mapInvalidateSignal, setMapInvalidateSignal] = useState(0);
-  const [regions, setRegions] = useState<RegionPreset[]>([]);
-  const [niches, setNiches] = useState<string[]>([]);
+  const [regions, setRegions] = useState<RegionPreset[]>(FALLBACK_REGIONS);
+  const [niches, setNiches] = useState<string[]>(FALLBACK_NICHES);
 
   // 1. Load LocalStorage Caches (Offline Resilience)
   useEffect(() => {
@@ -291,7 +293,11 @@ export default function MobileLeadRadarPage() {
         toast.success(`Radar discovered ${leads.length} high-intent buyer leads!`);
         return;
       }
-    } catch { }
+    } catch (err) {
+      console.warn("Autonomous radar fallback engaged:", err);
+    } finally {
+      setIsLoading(false);
+    }
 
     // Resilient client-side fallback
     const local = generateLocalLeads(payload);
@@ -304,7 +310,6 @@ export default function MobileLeadRadarPage() {
       localStorage.setItem("muchad_mobile_leads_cache", JSON.stringify(local));
     } catch { }
     toast.success(`Discovered ${local.length} verified buyer leads!`);
-    setIsLoading(false);
   };
 
   const handleDiscover = () => {
