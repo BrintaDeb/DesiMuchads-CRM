@@ -1,0 +1,27 @@
+import { NextResponse } from "next/server";
+import { forwardToBackend } from "@/lib/backendProxy";
+
+export async function GET(req: Request) {
+  const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
+  const backendData = await forwardToBackend("/attendance/my-status", {
+    method: "GET",
+    headers: { Authorization: authHeader },
+    timeoutMs: 1500,
+  });
+
+  if (backendData && backendData.data) {
+    return NextResponse.json(backendData);
+  }
+
+  return NextResponse.json({
+    data: {
+      status: "CLOCKED_OUT",
+      total_hours_today: 0,
+      current_session_seconds: 0,
+      mode: "OFFICE",
+    },
+    meta: { timestamp: new Date().toISOString() },
+    error: null,
+  });
+}
+
