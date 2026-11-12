@@ -19,8 +19,11 @@ export async function forwardToBackend<T = any>(
   const isVercel = Boolean(process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV);
   const isProd = process.env.NODE_ENV === "production";
 
-  // Determine backend base URL
-  let backendBase = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+  // Determine backend base URL (must be an absolute HTTP/HTTPS URL)
+  let backendBase = process.env.BACKEND_URL;
+  if (!backendBase && process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")) {
+    backendBase = process.env.NEXT_PUBLIC_API_URL;
+  }
 
   // Only allow localhost:8000 if running locally (NOT on Vercel and NOT in production without explicit URL)
   if (!backendBase && !isVercel && !isProd) {
@@ -28,7 +31,7 @@ export async function forwardToBackend<T = any>(
   }
 
   // If no backend is configured or running on Vercel without BACKEND_URL, return null immediately
-  if (!backendBase) {
+  if (!backendBase || !backendBase.startsWith("http")) {
     return null;
   }
 

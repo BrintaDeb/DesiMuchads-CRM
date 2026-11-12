@@ -1,9 +1,19 @@
 import axios from "axios";
 
 export const getApiBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") {
-    // In browser client, always route requests via same-origin relative path "/api/v1".
+    // In browser client (mobile devices, desktops, LAN, Vercel, WebView):
+    // If a custom external production API URL is explicitly configured (e.g. https://api.desimuchads.com/api/v1), use it.
+    const customApi = process.env.NEXT_PUBLIC_API_URL;
+    if (
+      customApi &&
+      !customApi.includes("localhost") &&
+      !customApi.includes("127.0.0.1") &&
+      customApi.startsWith("http")
+    ) {
+      return customApi;
+    }
+    // Otherwise, always route requests via same-origin relative path "/api/v1".
     // Next.js handles server-side proxying and serverless fallback seamlessly.
     // This eliminates CORS issues and port 8000 Windows Firewall blocks on mobile devices,
     // and ensures 100% reliable functionality when hosted on Vercel or accessed via mobile LAN.

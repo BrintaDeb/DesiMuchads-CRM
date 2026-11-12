@@ -25,10 +25,16 @@ class RealtimeClient {
 
     this.isConnecting = true;
     let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (typeof window !== "undefined") {
+      const isLocalhostClient = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!isLocalhostClient && wsUrl && (wsUrl.includes("localhost") || wsUrl.includes("127.0.0.1"))) {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${protocol}//${window.location.hostname}:8000/ws/v1/realtime`;
+      }
+    }
     if (!wsUrl && typeof window !== "undefined") {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname;
-      // If accessed via localhost, use localhost:8000; otherwise use host:8000
       wsUrl = `${protocol}//${host}:8000/ws/v1/realtime`;
     } else if (!wsUrl) {
       wsUrl = "ws://localhost:8000/ws/v1/realtime";
