@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { forwardToBackend } from "@/lib/backendProxy";
-
-const INITIAL_SERVERLESS_DEALS: any[] = [];
+import { getAllDeals, saveDeal } from "@/lib/serverlessStore";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
@@ -12,14 +11,20 @@ export async function GET(req: Request) {
     timeoutMs: 1800,
   });
 
-  if (backendData && backendData.data) {
+  if (backendData && backendData.data && Array.isArray(backendData.data)) {
+    // Sync backend deals into serverless store
+    for (const bDeal of backendData.data) {
+      saveDeal(bDeal);
+    }
     return NextResponse.json(backendData);
   }
 
+  const serverlessDeals = getAllDeals();
+
   return NextResponse.json({
-    data: INITIAL_SERVERLESS_DEALS,
+    data: serverlessDeals,
     meta: {
-      total_count: INITIAL_SERVERLESS_DEALS.length,
+      total_count: serverlessDeals.length,
       timestamp: new Date().toISOString(),
       engine: "Muchad Serverless CRM Pipeline",
     },
@@ -32,6 +37,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
 
+    // Forward to FastAPI backend if available
     const backendData = await forwardToBackend("/crm/deals", {
       method: "POST",
       headers: { Authorization: authHeader },
@@ -39,24 +45,7 @@ export async function POST(req: Request) {
       timeoutMs: 2000,
     });
 
-    if (backendData && backendData.data) {
-      return NextResponse.json(backendData);
-    }
-
-    const newDeal = {
-      id: `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      company_name: body.company_name || "New Enterprise Lead",
-      industry: body.industry || "Marketing & Growth",
-      contact_name: body.contact_name || body.primary_contact_name || "Founder",
-      email: body.email || body.contact_email || "contact@client.in",
-      phone: body.phone || body.contact_phone || "+91 98000 00000",
-      deal_stage: body.deal_stage || "LEAD_CAPTURED",
-      deal_value: body.deal_value || 85000,
-      retainer_amount: body.retainer_amount || body.deal_value || 85000,
-      health_score: body.health_score || 95,
-      last_activity_hours: 0,
-      is_decaying: false,
-    };
+    const newDeal = saveDeal(backendData?.data || body);
 
     return NextResponse.json({
       data: newDeal,
@@ -70,4 +59,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

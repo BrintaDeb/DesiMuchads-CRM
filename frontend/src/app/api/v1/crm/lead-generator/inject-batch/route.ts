@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forwardToBackend } from "@/lib/backendProxy";
+import { injectBatchLeads } from "@/lib/serverlessStore";
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +12,8 @@ export async function POST(req: Request) {
     }
 
     const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
+    const leads = body.leads || [];
+    const stage = body.stage || "LEAD_CAPTURED";
 
     // Attempt live FastAPI backend ingestion first if reachable
     const backendData = await forwardToBackend("/crm/lead-generator/inject-batch", {
@@ -20,43 +23,25 @@ export async function POST(req: Request) {
       timeoutMs: 2000,
     });
 
-    if (backendData && backendData.data) {
-      return NextResponse.json(backendData);
-    }
-
-    // Resilient offline fallback
-    const leads = body.leads || [];
-    const stage = body.stage || "LEAD_CAPTURED";
-
-    const created_deals = leads.map((l: any, idx: number) => ({
-      id: l.temp_id || `deal_${Date.now()}_${idx}`,
-      company_name: l.company_name,
-      deal_value: l.deal_value || 75000,
-      stage: stage,
-    }));
+    // Always persist into serverless deals store so /crm/deals returns them immediately
+    const injectedDeals = injectBatchLeads(leads, stage);
 
     return NextResponse.json({
       data: {
-        injected_count: created_deals.length,
-        created_deals: created_deals,
-        message: `Successfully injected ${created_deals.length} high-intent leads into the CRM pipeline.`,
+        injected_count: injectedDeals.length,
+        created_deals: backendData?.data?.created_deals || injectedDeals,
+        message: `Successfully injected ${injectedDeals.length} high-intent leads into the CRM pipeline.`,
       },
       meta: {
         timestamp: new Date().toISOString(),
+        engine: "Muchad Autonomous Serverless Lead Pipeline",
       },
       error: null,
     });
-  } catch {
-    return NextResponse.json({
-      data: {
-        injected_count: 0,
-        created_deals: [],
-        message: "Offline batch processed.",
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-      },
-      error: null,
-    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { data: null, error: err.message || "Failed to inject leads" },
+      { status: 500 }
+    );
   }
 }

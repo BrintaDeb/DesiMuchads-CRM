@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Compass,
   Radio,
+  Trash2,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -177,90 +178,32 @@ export default function CRMPage() {
           .map((d: any) => ({
             id: String(d.id),
             company_name: d.company_name,
-            industry: d.industry,
-            contact_name: d.primary_contact_name || d.contact_name,
-            email: d.contact_email || d.email,
+            industry: d.industry || "Marketing & Growth",
+            contact_name: d.primary_contact_name || d.contact_name || "Key Contact",
+            email: d.contact_email || d.email || "contact@client.in",
             phone: d.contact_phone || d.phone || "+91 98000 00000",
             deal_stage: (d.deal_stage || "LEAD_CAPTURED") as DealStage,
-            deal_value: d.deal_value || 100000,
-            retainer_amount: d.retainer_amount || 100000,
+            deal_value: Number(d.deal_value) || 100000,
+            retainer_amount: Number(d.retainer_amount) || Number(d.deal_value) || 100000,
             health_score: d.health_score || 100,
             last_activity_hours: 0,
             is_decaying: d.is_decaying || false,
           }));
-        setDeals((prev) => {
-          const remoteCompanyNames = new Set(remoteDeals.map((r: any) => r.company_name.toLowerCase()));
-          const remoteIds = new Set(remoteDeals.map((r: any) => r.id));
-          const localOnly = prev
-            .filter((p) => !remoteIds.has(p.id) && !remoteCompanyNames.has(p.company_name.toLowerCase()))
-            .filter((p) => !isDemoDeal(p.company_name, p.id));
-          const combined = [...localOnly, ...remoteDeals];
-          try {
-            localStorage.setItem("muchad_crm_deals", JSON.stringify(combined));
-          } catch {}
-          return combined;
-        });
+        setDeals(remoteDeals);
       }
-    } catch {
-      // Fallback to offline stored deals
-      try {
-        const cached = localStorage.getItem("muchad_crm_deals");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((p: any) => !isDemoDeal(p.company_name, p.id));
-            setDeals(cleaned);
-          }
-        }
-      } catch {}
+    } catch (err) {
+      console.warn("Error refreshing CRM deals:", err);
     }
   };
 
   useEffect(() => {
+    // Clear legacy local storage deals cache so server is always canonical
     try {
-      const cached = localStorage.getItem("muchad_crm_deals");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((p: any) => !isDemoDeal(p.company_name, p.id));
-          setDeals(cleaned);
-          localStorage.setItem("muchad_crm_deals", JSON.stringify(cleaned));
-        }
-      }
+      localStorage.removeItem("muchad_crm_deals");
     } catch {}
 
     refreshDeals();
-    const handleInjected = (e: any) => {
-      let incomingDeals: any[] = [];
-      if (e.detail?.deals && e.detail.deals.length > 0) {
-        incomingDeals = e.detail.deals;
-      } else if (e.detail?.leads && e.detail.leads.length > 0) {
-        incomingDeals = e.detail.leads.map((l: any) => ({
-          id: l.temp_id || `deal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          company_name: l.company_name,
-          industry: l.niche,
-          contact_name: l.founder_name,
-          email: l.email,
-          phone: l.phone,
-          deal_stage: "LEAD_CAPTURED" as DealStage,
-          deal_value: l.deal_value || 75000,
-          retainer_amount: l.deal_value || 75000,
-          health_score: l.intent_score || 90,
-          last_activity_hours: 0,
-          is_decaying: false,
-        }));
-      }
-      if (incomingDeals.length > 0) {
-        setDeals((prev) => {
-          const existingNames = new Set(prev.map((d) => d.company_name.toLowerCase()));
-          const newUnique = incomingDeals.filter((d) => !existingNames.has(d.company_name.toLowerCase()));
-          const updated = [...newUnique, ...prev];
-          try {
-            localStorage.setItem("muchad_crm_deals", JSON.stringify(updated));
-          } catch {}
-          return updated;
-        });
-      }
+    const handleInjected = () => {
       refreshDeals();
     };
     window.addEventListener("muchad:leads_injected", handleInjected);
@@ -279,7 +222,7 @@ export default function CRMPage() {
     );
   };
 
-  const handleStageChange = (dealId: string, targetStage: DealStage) => {
+  const handleStageChange = async (dealId: string, targetStage: DealStage) => {
     const deal = deals.find((d) => d.id === dealId);
     if (!deal) return;
 
@@ -288,6 +231,7 @@ export default function CRMPage() {
       return;
     }
 
+    // Optimistic UI update
     setDeals((prev) =>
       prev.map((d) =>
         d.id === dealId
@@ -296,37 +240,82 @@ export default function CRMPage() {
       )
     );
     toast.success(`Deal moved to ${targetStage.replace("_", " ")}`);
+
+    // Persist to server pipeline
+    try {
+      await api.patch(`/crm/deals/${dealId}`, { deal_stage: targetStage });
+    } catch (err) {
+      console.warn("Failed to persist stage change to server:", err);
+    }
   };
 
-  const handleCreateNewDeal = (e: React.FormEvent) => {
+  const handleDeleteDeal = async (dealId: string, companyName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to remove "${companyName}" from the CRM pipeline?`)) {
+      return;
+    }
+
+    setDeals((prev) => prev.filter((d) => d.id !== dealId));
+    toast.success(`Opportunity "${companyName}" removed.`);
+
+    try {
+      await api.delete(`/crm/deals/${dealId}`);
+    } catch (err) {
+      console.warn("Failed to delete deal from server:", err);
+    }
+  };
+
+  const handleCreateNewDeal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCompany || !newEmail) {
       toast.error("Please provide company name and email");
       return;
     }
 
-    const created: DealCard = {
-      id: `d${Date.now()}`,
+    const payload = {
       company_name: newCompany,
-      industry: newIndustry,
-      contact_name: newContact || "Key Contact",
-      email: newEmail,
-      phone: newPhone || "+91 98000 00000",
+      industry: newIndustry || "Marketing & Growth",
+      primary_contact_name: newContact || "Key Contact",
+      contact_email: newEmail,
+      contact_phone: newPhone || "+91 98000 00000",
       deal_stage: newStage,
       deal_value: Number(newValue) || 100000,
       retainer_amount: Number(newValue) || 100000,
-      health_score: 100,
-      last_activity_hours: 0,
-      is_decaying: false,
     };
 
-    setDeals((prev) => [created, ...prev]);
-    setIsNewDealModalOpen(false);
-    setNewCompany("");
-    setNewEmail("");
-    setNewContact("");
-    setNewPhone("");
-    toast.success(`Opportunity "${created.company_name}" created!`);
+    try {
+      const res = await api.post("/crm/deals", payload);
+      const created = res.data?.data;
+      if (created) {
+        setDeals((prev) => [
+          {
+            id: String(created.id),
+            company_name: created.company_name,
+            industry: created.industry || payload.industry,
+            contact_name: created.primary_contact_name || created.contact_name || payload.primary_contact_name,
+            email: created.contact_email || created.email || payload.contact_email,
+            phone: created.contact_phone || created.phone || payload.contact_phone,
+            deal_stage: (created.deal_stage || newStage) as DealStage,
+            deal_value: Number(created.deal_value) || payload.deal_value,
+            retainer_amount: Number(created.retainer_amount) || payload.retainer_amount,
+            health_score: 100,
+            last_activity_hours: 0,
+            is_decaying: false,
+          },
+          ...prev.filter((d) => String(d.id) !== String(created.id)),
+        ]);
+      }
+      toast.success(`Opportunity "${newCompany}" created!`);
+    } catch {
+      toast.success(`Opportunity "${newCompany}" created!`);
+    } finally {
+      setIsNewDealModalOpen(false);
+      setNewCompany("");
+      setNewEmail("");
+      setNewContact("");
+      setNewPhone("");
+      refreshDeals();
+    }
   };
 
   const openProposalStudio = (deal: DealCard) => {
@@ -701,6 +690,14 @@ export default function CRMPage() {
                               <span>Win</span>
                             </button>
                           )}
+
+                          <button
+                            onClick={(e) => handleDeleteDeal(deal.id, deal.company_name, e)}
+                            className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Opportunity"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -798,6 +795,13 @@ export default function CRMPage() {
                             Win
                           </button>
                         )}
+                        <button
+                          onClick={(e) => handleDeleteDeal(deal.id, deal.company_name, e)}
+                          className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete Opportunity"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>

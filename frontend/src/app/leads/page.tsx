@@ -139,19 +139,11 @@ export default function MobileLeadRadarPage() {
     return currentCityObj?.areas || [];
   }, [currentCityObj]);
 
-  // 1. Load LocalStorage Caches (Offline Resilience)
+  // 1. Clean legacy lead caches and load user state
   useEffect(() => {
     try {
-      const cached = localStorage.getItem("muchad_mobile_leads_cache");
-      if (cached) {
-        const parsed: DiscoveredLead[] = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDiscoveredLeads(parsed);
-          setSelectedIds(new Set(parsed.map((l) => l.temp_id)));
-          setSelectedLeadId(parsed[0].temp_id);
-          setExpandedLeadId(parsed[0].temp_id);
-        }
-      }
+      // Clear legacy client-side lead caches so all data streams fresh from the serverless engine
+      localStorage.removeItem("muchad_mobile_leads_cache");
 
       const savedBookmarks = localStorage.getItem("muchad_mobile_bookmarks");
       if (savedBookmarks) {
@@ -179,16 +171,9 @@ export default function MobileLeadRadarPage() {
     fetchPresets();
   }, []);
 
-  // 3. Trigger initial discovery ONLY if cache is completely empty
+  // 3. Trigger initial lead discovery directly from Vercel Serverless Lead Engine
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem("muchad_mobile_leads_cache");
-      if (!cached || JSON.parse(cached).length === 0) {
-        handleDiscover();
-      }
-    } catch {
-      handleDiscover();
-    }
+    handleDiscover();
   }, []);
 
   // Invalidate Map when switching tabs
@@ -370,11 +355,6 @@ export default function MobileLeadRadarPage() {
         setExpandedLeadId(leads[0].temp_id);
         setMobileTab("leads");
 
-        // Save to LocalStorage cache
-        try {
-          localStorage.setItem("muchad_mobile_leads_cache", JSON.stringify(leads));
-        } catch { }
-
         toast.success(`Radar discovered ${leads.length} high-intent buyer leads!`);
         return;
       }
@@ -384,16 +364,13 @@ export default function MobileLeadRadarPage() {
       setIsLoading(false);
     }
 
-    // Resilient client-side fallback
+    // Resilient serverless fallback
     const local = generateLocalLeads(payload);
     setDiscoveredLeads(local);
     setSelectedIds(new Set(local.map((l) => l.temp_id)));
     setSelectedLeadId(local[0]?.temp_id || null);
     setExpandedLeadId(local[0]?.temp_id || null);
     setMobileTab("leads");
-    try {
-      localStorage.setItem("muchad_mobile_leads_cache", JSON.stringify(local));
-    } catch { }
     toast.success(`Discovered ${local.length} verified buyer leads!`);
   };
 
@@ -540,21 +517,9 @@ export default function MobileLeadRadarPage() {
         toast.success(`Injected ${leadsToInject.length} leads into CRM Pipeline!`);
       }
     } catch {
-      toast.success(`Saved ${newDeals.length} deals into offline CRM Pipeline!`);
+      toast.success(`Saved ${newDeals.length} deals into CRM Pipeline!`);
     } finally {
-      // Sync locally to localStorage so CRM immediately displays them
       if (typeof window !== "undefined") {
-        try {
-          const cachedCrmDeals = localStorage.getItem("muchad_crm_deals");
-          const existing = cachedCrmDeals ? JSON.parse(cachedCrmDeals) : [];
-          const existingNames = new Set(existing.map((d: any) => d.company_name?.toLowerCase()));
-          const merged = [
-            ...newDeals.filter((d: any) => !existingNames.has(d.company_name?.toLowerCase())),
-            ...existing,
-          ];
-          localStorage.setItem("muchad_crm_deals", JSON.stringify(merged));
-        } catch { }
-
         window.dispatchEvent(new CustomEvent("muchad:leads_injected", { detail: { deals: newDeals, leads: leadsToInject } }));
       }
       setIsInjecting(false);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forwardToBackend } from "@/lib/backendProxy";
+import { updateDeal } from "@/lib/serverlessStore";
 
 export async function POST(
   req: Request,
@@ -15,12 +16,10 @@ export async function POST(
       timeoutMs: 2000,
     });
 
-    if (backendData && backendData.data) {
-      return NextResponse.json(backendData);
-    }
+    updateDeal(id, { deal_stage: "PROPOSAL_SENT" });
 
     return NextResponse.json({
-      data: {
+      data: backendData?.data || {
         status: "SENT",
         deal_id: id,
         message: "Commercial proposal successfully dispatched to decision maker via WhatsApp & Email.",
@@ -36,4 +35,3 @@ export async function POST(
     });
   }
 }
-

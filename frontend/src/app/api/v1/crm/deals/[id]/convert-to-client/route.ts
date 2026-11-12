@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forwardToBackend } from "@/lib/backendProxy";
+import { saveClientFromDeal } from "@/lib/serverlessStore";
 
 export async function POST(
   req: Request,
@@ -17,18 +18,15 @@ export async function POST(
       timeoutMs: 2500,
     });
 
-    if (backendData && backendData.data) {
-      return NextResponse.json(backendData);
-    }
+    const client = saveClientFromDeal(id, body.initial_retainer || body.retainer_amount);
 
-    const clientId = `client_${Date.now()}`;
     return NextResponse.json({
-      data: {
-        client_id: clientId,
+      data: backendData?.data || {
+        client_id: client?.id || `client_${id}`,
         deal_id: id,
         status: "ACTIVE_RETAINER",
-        company_name: body.company_name || "New Retainer Client",
-        monthly_retainer: body.retainer_amount || 85000,
+        company_name: client?.company_name || body.company_name || "New Retainer Client",
+        monthly_retainer: client?.retainer_amount || body.retainer_amount || 85000,
         message: "Deal successfully converted into active client organization with automated workspace onboarding.",
       },
       meta: { timestamp: new Date().toISOString() },
@@ -42,4 +40,3 @@ export async function POST(
     });
   }
 }
-

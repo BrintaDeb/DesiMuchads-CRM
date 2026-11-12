@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forwardToBackend } from "@/lib/backendProxy";
+import { getAllClients } from "@/lib/serverlessStore";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization") || "Bearer demo_token_super_admin";
@@ -14,10 +15,11 @@ export async function GET(req: Request) {
     return NextResponse.json(backendData);
   }
 
+  const clients = getAllClients();
+
   return NextResponse.json({
-    data: [],
-    meta: { total_count: 0, timestamp: new Date().toISOString() },
+    data: clients,
+    meta: { total_count: clients.length, timestamp: new Date().toISOString() },
     error: null,
   });
 }
-

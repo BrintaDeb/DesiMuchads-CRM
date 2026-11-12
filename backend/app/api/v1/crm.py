@@ -114,6 +114,23 @@ async def update_deal(
     return ApiResponse(data=ClientOut.model_validate(client))
 
 
+@router.delete("/deals/{id}", response_model=ApiResponse[dict])
+async def delete_deal(
+    id: uuid.UUID,
+    current_user: User = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ACCOUNT_MANAGER])),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Client).where(Client.id == id, Client.deleted_at.is_(None))
+    res = await db.execute(query)
+    client = res.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    client.deleted_at = datetime.utcnow()
+    await db.commit()
+    return ApiResponse(data={"success": True, "id": str(id)})
+
+
 @router.post("/deals/{id}/convert-to-client", response_model=ApiResponse[dict])
 async def convert_deal_to_client(
     id: uuid.UUID,
